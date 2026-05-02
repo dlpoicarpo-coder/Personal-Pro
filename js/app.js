@@ -64,9 +64,15 @@ window.addEventListener('hashchange', () => {
 });
 
 // Initialize app
-document.addEventListener('DOMContentLoaded', () => {
+function initApp() {
   const path = window.location.hash.slice(1) || '/';
   if (!path.startsWith('/form/')) {
     navigateTo(path);
   }
-});
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initApp);
+} else {
+  initApp();
+}
