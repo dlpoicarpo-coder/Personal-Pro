@@ -1,10 +1,8 @@
-// ========================================
-// PERSONAL PRO — App Central (Motor Corrigido)
-// ========================================
 import { renderSidebar, initSidebar } from './components/sidebar.js';
 import { isAuthenticated, renderLogin, initLogin } from './pages/login.js';
 
-import { renderDashboard } from './pages/dashboard.js';
+// Import Renders and Inits
+import { renderDashboard, initDashboardCharts } from './pages/dashboard.js';
 import { renderStudents, initStudents } from './pages/students.js';
 import { renderWorkouts, initWorkouts } from './pages/workouts.js';
 import { renderTracker, initTracker } from './pages/live-tracker.js';
@@ -13,19 +11,25 @@ import { renderCalendar, initCalendar } from './pages/calendar.js';
 import { renderBiofeedback, initBiofeedback } from './pages/biofeedback.js';
 import { renderFinancial, initFinancial } from './pages/financial.js';
 import { renderAssessments, initAssessments } from './pages/assessments.js';
+import { renderExercisesLibrary, initExercisesLibrary } from './pages/exercises-library.js';
+import { renderPeriodization, initPeriodization } from './pages/periodization.js';
+import { renderWeeklySummary, initWeeklySummary } from './pages/weekly-summary.js';
 import { renderSettings, initSettings } from './pages/settings.js';
 
-// Roteador Central (Agora fala a mesma língua que o Menu!)
+// Central Router
 const routes = {
-  '/': { render: renderDashboard },
+  '/': { render: renderDashboard, init: initDashboardCharts },
   '/alunos': { render: renderStudents, init: initStudents },
-  '/treinos': { render: renderWorkouts, init: initWorkouts },
   '/tracker': { render: renderTracker, init: initTracker },
-  '/relatorios': { render: renderReports, init: initReports },
   '/agenda': { render: renderCalendar, init: initCalendar },
-  '/biofeedback': { render: renderBiofeedback, init: initBiofeedback },
-  '/financeiro': { render: renderFinancial, init: initFinancial },
+  '/treinos': { render: renderWorkouts, init: initWorkouts },
+  '/periodizacao': { render: renderPeriodization, init: initPeriodization },
   '/avaliacoes': { render: renderAssessments, init: initAssessments },
+  '/biofeedback': { render: renderBiofeedback, init: initBiofeedback },
+  '/semanal': { render: renderWeeklySummary, init: initWeeklySummary },
+  '/financeiro': { render: renderFinancial, init: initFinancial },
+  '/exercicios': { render: renderExercisesLibrary, init: initExercisesLibrary },
+  '/relatorios': { render: renderReports, init: initReports },
   '/config': { render: renderSettings, init: initSettings }
 };
 
@@ -39,8 +43,8 @@ export async function navigateTo(path) {
     initLogin(() => navigateTo('/'));
     return;
   }
-
-  // 2. Cria a estrutura da página se não existir
+  
+  // 2. Create layout if missing
   if (!document.querySelector('.sidebar')) {
     appContainer.innerHTML = `
       ${renderSidebar(path)}
@@ -53,7 +57,7 @@ export async function navigateTo(path) {
 
   const content = document.getElementById('pageContent');
   
-  // 3. Ilumina o menu lateral correto
+  // 3. Highlight active menu
   document.querySelectorAll('.sidebar-nav a').forEach(a => {
     a.classList.remove('active');
     if (a.getAttribute('href') === '#' + path) a.classList.add('active');
@@ -67,11 +71,11 @@ export async function navigateTo(path) {
     content.innerHTML = await route.render();
     if (route.init) await route.init(navigateTo);
   } catch (err) {
-    content.innerHTML = `<div class="card"><div class="text-danger">Página não encontrada ou em construção.</div></div>`;
+    content.innerHTML = `<div class="card"><div class="text-danger">Erro ao carregar página: ${err.message}</div></div>`;
   }
 }
 
-// Deteta quando clicas numa aba
+// Handle hash changes
 window.addEventListener('hashchange', () => {
   const path = window.location.hash.slice(1) || '/';
   if (!path.startsWith('/form/')) {
@@ -79,7 +83,7 @@ window.addEventListener('hashchange', () => {
   }
 });
 
-// Arranca a Máquina
+// Initialize app
 function initApp() {
   const path = window.location.hash.slice(1) || '/';
   if (!path.startsWith('/form/')) {
