@@ -84,6 +84,4 @@ export function initSidebar() {
       sidebar.classList.remove('mobile-open');
     });
   }
-}
-
 export { MENU_ITEMS };
