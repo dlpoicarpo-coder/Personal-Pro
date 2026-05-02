@@ -63,6 +63,21 @@ export async function navigateTo(path) {
     if (a.getAttribute('href') === '#' + path) a.classList.add('active');
   });
 
+  // Atualiza as iniciais e o nome do treinador na sidebar
+  import('./db.js').then(({ default: db }) => {
+    db.get('settings', 'trainer_auth').then(trainer => {
+      if (trainer && trainer.trainerName) {
+        const nameEl = document.getElementById('trainerName');
+        const avatarEl = document.getElementById('trainerAvatar');
+        if (nameEl) nameEl.textContent = trainer.trainerName;
+        if (avatarEl) {
+          const initials = trainer.trainerName.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
+          avatarEl.textContent = initials;
+        }
+      }
+    });
+  });
+
   // 4. Carrega a Aba Solicitada
   const route = routes[path] || routes['/'];
   content.innerHTML = '<div class="page-loading"><div class="spinner"></div></div>';
