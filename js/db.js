@@ -1,99 +1,89 @@
 // ========================================
-// PERSONAL PRO — Supabase Wrapper
+// PERSONAL PRO — Supabase Wrapper (NoSQL Mode)
 // ========================================
 
 const supabaseUrl = 'https://vbxedlloesvjpqzunqyv.supabase.co'; 
 const supabaseKey = 'sb_publishable_d4P6mzDj_sSUpFibSGUcdg_2GOsD35E';
 
-// Initialize Supabase client (requires script tag in index.html)
+// Initialize Supabase client
 const supabase = window.supabase ? window.supabase.createClient(supabaseUrl, supabaseKey) : null;
 
 class Database {
   constructor() {
     this.supabase = supabase;
     if (!this.supabase) {
-      console.error("Supabase client não encontrado. Verifique se o script está no index.html");
+      console.error("Supabase client não encontrado no window.");
     }
-  }
-
-  // Define keys for specific stores if needed (default is 'id')
-  _getKeyPath(storeName) {
-    return 'id';
   }
 
   async get(storeName, id) {
     if (!this.supabase) return null;
-    const key = this._getKeyPath(storeName);
     const { data, error } = await this.supabase
       .from(storeName)
-      .select('*')
-      .eq(key, id)
+      .select('data')
+      .eq('id', id)
       .single();
       
-    if (error && error.code !== 'PGRST116') { // PGRST116 is "no rows returned", which is fine for get
+    if (error && error.code !== 'PGRST116') {
       console.error(`Supabase error getting ${id} from ${storeName}:`, error.message);
       return null;
     }
-    return data || null;
+    return data ? data.data : null;
   }
 
   async getAll(storeName) {
     if (!this.supabase) return [];
     const { data, error } = await this.supabase
       .from(storeName)
-      .select('*');
+      .select('data');
       
     if (error) {
       console.error(`Supabase error getAll ${storeName}:`, error.message);
       return [];
     }
-    return data || [];
+    return data ? data.map(row => row.data) : [];
   }
 
   async getByIndex(storeName, indexName, value) {
+    // NoSQL mode: we fetch all and filter in memory, OR we can use JSONB querying.
+    // For simplicity and compatibility with IndexedDB limits, we fetch and filter.
     if (!this.supabase) return [];
-    const { data, error } = await this.supabase
-      .from(storeName)
-      .select('*')
-      .eq(indexName, value);
-      
-    if (error) {
-      console.error(`Supabase error getByIndex ${storeName}:`, error.message);
-      return [];
-    }
-    return data || [];
+    const all = await this.getAll(storeName);
+    return all.filter(item => item && item[indexName] === value);
   }
 
-  async put(storeName, data) {
-    if (!this.supabase) return data;
-    if (!data.id) data.id = crypto.randomUUID();
-    data.updatedAt = new Date().toISOString();
-    if (!data.createdAt) data.createdAt = new Date().toISOString();
+  async put(storeName, item) {
+    if (!this.supabase) return item;
+    if (!item.id) item.id = crypto.randomUUID();
+    item.updatedAt = new Date().toISOString();
+    if (!item.createdAt) item.createdAt = new Date().toISOString();
 
-    const { data: result, error } = await this.supabase
+    const payload = {
+      id: item.id,
+      data: item
+    };
+
+    const { error } = await this.supabase
       .from(storeName)
-      .upsert(data)
-      .select()
-      .single();
+      .upsert(payload);
       
     if (error) {
       console.error(`Supabase error putting into ${storeName}:`, error.message);
       throw error;
     }
-    return result;
+    return item;
   }
 
-  async add(storeName, data) {
-    return this.put(storeName, data); // Upsert handles adding
+  async add(storeName, item) {
+    return this.put(storeName, item);
   }
 
   async delete(storeName, id) {
     if (!this.supabase) return;
-    const key = this._getKeyPath(storeName);
     const { error } = await this.supabase
       .from(storeName)
       .delete()
-      .eq(key, id);
+      .eq('id', id);
       
     if (error) {
       console.error(`Supabase error deleting ${id} from ${storeName}:`, error.message);
@@ -103,7 +93,6 @@ class Database {
 
   async clear(storeName) {
     if (!this.supabase) return;
-    // Deleção de tudo requer uma condição no Supabase, então deletamos onde ID não é nulo.
     const { error } = await this.supabase
       .from(storeName)
       .delete()
@@ -116,7 +105,7 @@ class Database {
     if (!this.supabase) return 0;
     const { count, error } = await this.supabase
       .from(storeName)
-      .select('*', { count: 'exact', head: true });
+      .select('id', { count: 'exact', head: true });
       
     if (error) {
       console.error(`Supabase error counting ${storeName}:`, error.message);
