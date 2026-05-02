@@ -1,5 +1,5 @@
 import { renderSidebar, initSidebar } from './components/sidebar.js';
-import { renderDashboard, initDashboard } from './pages/dashboard.js';
+import { renderDashboard } from './pages/dashboard.js';
 import { renderStudents, initStudents } from './pages/students.js';
 import { renderWorkouts, initWorkouts } from './pages/workouts.js';
 import { renderTracker, initTracker } from './pages/live-tracker.js';
@@ -11,7 +11,7 @@ import { renderAssessments, initAssessments } from './pages/assessments.js';
 
 // Central Router
 const routes = {
-  '/': { render: renderDashboard, init: initDashboard },
+  '/': { render: renderDashboard },
   '/students': { render: renderStudents, init: initStudents },
   '/workouts': { render: renderWorkouts, init: initWorkouts },
   '/tracker': { render: renderTracker, init: initTracker },
