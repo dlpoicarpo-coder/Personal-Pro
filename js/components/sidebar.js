@@ -84,4 +84,15 @@ export function initSidebar() {
       sidebar.classList.remove('mobile-open');
     });
   }
+
+  if (logoutBtn) {
+    logoutBtn.addEventListener('click', () => {
+      if(window.confirm('Tem a certeza que deseja sair do sistema?')) {
+        localStorage.removeItem('pp_session'); 
+        window.location.reload(); 
+      }
+    });
+  }
+}
+
 export { MENU_ITEMS };
