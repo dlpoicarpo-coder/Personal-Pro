@@ -173,6 +173,35 @@ class Database {
       return localCount;
     }
   }
+
+  async seedTemplates() {
+    // Adiciona templates iniciais se o banco estiver vazio
+    const exerciciosCount = await this.count('exercises');
+    if (exerciciosCount === 0) {
+      const templatesEx = [
+        { name: 'Supino Reto', group: 'Peito', type: 'Força' },
+        { name: 'Agachamento Livre', group: 'Pernas', type: 'Força' },
+        { name: 'Puxada Frontal', group: 'Costas', type: 'Força' },
+        { name: 'Desenvolvimento', group: 'Ombros', type: 'Força' },
+        { name: 'Rosca Direta', group: 'Bíceps', type: 'Força' },
+        { name: 'Tríceps Testa', group: 'Tríceps', type: 'Força' },
+        { name: 'Corrida (Esteira)', group: 'Cardio', type: 'Resistência' }
+      ];
+      for (const ex of templatesEx) {
+        await this.put('exercises', ex);
+      }
+    }
+
+    const cyclesCount = await this.count('cycles');
+    if (cyclesCount === 0) {
+      await this.put('cycles', {
+        name: 'Macro Ciclo Padrão (Hipertrofia)',
+        description: 'Template focado em ganho de massa magra dividido em 3 fases.',
+        phases: ['Adaptação', 'Choque', 'Polimento'],
+        duration: '12 semanas'
+      });
+    }
+  }
 }
 
 export const db = new Database();
