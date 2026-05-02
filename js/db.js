@@ -179,13 +179,47 @@ class Database {
     const exerciciosCount = await this.count('exercises');
     if (exerciciosCount === 0) {
       const templatesEx = [
-        { name: 'Supino Reto', group: 'Peito', type: 'Força' },
+        // Peito
+        { name: 'Supino Reto com Barra', group: 'Peito', type: 'Força' },
+        { name: 'Supino Inclinado com Halteres', group: 'Peito', type: 'Força' },
+        { name: 'Crucifixo Máquina', group: 'Peito', type: 'Força' },
+        { name: 'Crossover Polia Alta', group: 'Peito', type: 'Força' },
+        // Costas
+        { name: 'Puxada Frontal Aberta', group: 'Costas', type: 'Força' },
+        { name: 'Remada Curvada com Barra', group: 'Costas', type: 'Força' },
+        { name: 'Remada Baixa Triângulo', group: 'Costas', type: 'Força' },
+        { name: 'Pulldown com Corda', group: 'Costas', type: 'Força' },
+        // Pernas (Quadríceps e Posteriores)
         { name: 'Agachamento Livre', group: 'Pernas', type: 'Força' },
-        { name: 'Puxada Frontal', group: 'Costas', type: 'Força' },
-        { name: 'Desenvolvimento', group: 'Ombros', type: 'Força' },
-        { name: 'Rosca Direta', group: 'Bíceps', type: 'Força' },
-        { name: 'Tríceps Testa', group: 'Tríceps', type: 'Força' },
-        { name: 'Corrida (Esteira)', group: 'Cardio', type: 'Resistência' }
+        { name: 'Leg Press 45º', group: 'Pernas', type: 'Força' },
+        { name: 'Cadeira Extensora', group: 'Pernas', type: 'Força' },
+        { name: 'Mesa Flexora', group: 'Pernas', type: 'Força' },
+        { name: 'Cadeira Flexora', group: 'Pernas', type: 'Força' },
+        { name: 'Elevação Pélvica', group: 'Pernas', type: 'Força' },
+        { name: 'Panturrilha no Leg Press', group: 'Pernas', type: 'Força' },
+        // Ombros
+        { name: 'Desenvolvimento com Halteres', group: 'Ombros', type: 'Força' },
+        { name: 'Elevação Lateral com Halteres', group: 'Ombros', type: 'Força' },
+        { name: 'Elevação Frontal', group: 'Ombros', type: 'Força' },
+        { name: 'Crucifixo Invertido Máquina', group: 'Ombros', type: 'Força' },
+        // Bíceps e Tríceps
+        { name: 'Rosca Direta com Barra W', group: 'Bíceps', type: 'Força' },
+        { name: 'Rosca Alternada com Halteres', group: 'Bíceps', type: 'Força' },
+        { name: 'Rosca Scott Máquina', group: 'Bíceps', type: 'Força' },
+        { name: 'Tríceps Pulley (Corda)', group: 'Tríceps', type: 'Força' },
+        { name: 'Tríceps Testa com Barra W', group: 'Tríceps', type: 'Força' },
+        { name: 'Tríceps Francês com Halter', group: 'Tríceps', type: 'Força' },
+        // Abdômen
+        { name: 'Abdominal Supra (Solo)', group: 'Abdômen', type: 'Força' },
+        { name: 'Abdominal Infra (Paralela)', group: 'Abdômen', type: 'Força' },
+        { name: 'Prancha Isométrica', group: 'Abdômen', type: 'Força' },
+        // Cardio Específico
+        { name: 'Corrida (Esteira) - MICT', group: 'Cardio', type: 'Cardio' },
+        { name: 'Bicicleta Ergométrica', group: 'Cardio', type: 'Cardio' },
+        { name: 'Elíptico', group: 'Cardio', type: 'Cardio' },
+        { name: 'Tiro Sprint (HIIT)', group: 'Cardio', type: 'Cardio' },
+        { name: 'Tiro Sprint (SIT)', group: 'Cardio', type: 'Cardio' },
+        { name: 'Pular Corda', group: 'Cardio', type: 'Cardio' }
       ];
       for (const ex of templatesEx) {
         await this.put('exercises', ex);
@@ -194,12 +228,29 @@ class Database {
 
     const cyclesCount = await this.count('cycles');
     if (cyclesCount === 0) {
-      await this.put('cycles', {
-        name: 'Macro Ciclo Padrão (Hipertrofia)',
-        description: 'Template focado em ganho de massa magra dividido em 3 fases.',
-        phases: ['Adaptação', 'Choque', 'Polimento'],
-        duration: '12 semanas'
-      });
+      const templatesCycles = [
+        {
+          name: 'Macrociclo: Hipertrofia (12 Semanas)',
+          description: 'Focado em ganho máximo de massa magra. Ondulação progressiva de carga.',
+          phases: ['Adaptação Anatômica (3 sem)', 'Hipertrofia I (4 sem)', 'Hipertrofia II (3 sem)', 'Polimento / Deload (2 sem)'],
+          duration: '12 semanas'
+        },
+        {
+          name: 'Macrociclo: Emagrecimento Acelerado',
+          description: 'Combinação de Treinamento de Força com HIIT/SIT para otimização metabólica.',
+          phases: ['Resistência Muscular (4 sem)', 'Misto Força+HIIT (4 sem)', 'Definição Extrema (4 sem)'],
+          duration: '12 semanas'
+        },
+        {
+          name: 'Macrociclo: Treinamento Concorrente (Cardio + Força)',
+          description: 'Periodização Polarizada. Foco em melhorar a capacidade cardiorrespiratória e manter massa magra.',
+          phases: ['Base Aeróbica (4 sem)', 'Intensificação (HIIT + Força Base) (4 sem)', 'Performance Máxima (4 sem)'],
+          duration: '12 semanas'
+        }
+      ];
+      for (const cycle of templatesCycles) {
+        await this.put('cycles', cycle);
+      }
     }
   }
 }
