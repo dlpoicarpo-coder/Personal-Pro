@@ -103,13 +103,20 @@ export async function navigateTo(path) {
   const user = await getCurrentUser();
   if (user) {
     db.setUser(user);
-    const trainerName = user.user_metadata?.trainer_name || user.email;
+    // Use saved profile name, fallback to auth metadata
+    const savedSettings = await db.get('settings', 'trainer').catch(() => null) || {};
+    const trainerName = savedSettings.trainerName || user.user_metadata?.trainer_name || user.email;
     const nameEl = document.getElementById('trainerName');
     const avatarEl = document.getElementById('trainerAvatar');
     if (nameEl) nameEl.textContent = trainerName;
     if (avatarEl) {
       const initials = trainerName.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
       avatarEl.textContent = initials;
+    }
+    // Restore saved theme
+    if (savedSettings.theme) {
+      localStorage.setItem('pp_theme', savedSettings.theme);
+      document.documentElement.setAttribute('data-theme', savedSettings.theme);
     }
   }
 

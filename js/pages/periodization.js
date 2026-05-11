@@ -154,39 +154,49 @@ export function initPeriodization(navigateFn) {
   document.getElementById('addMacroBtn')?.addEventListener('click', async () => {
     const students = (await db.getAll('students')).filter(s => s.status === 'Ativo');
     const exercises = await db.getAll('exercises');
-    const muscleGroups = [...new Set(exercises.map(e => e.muscleGroup).filter(Boolean))];
+    // Load workout TEMPLATES created by trainer (not executed sessions)
+    const trainerTemplates = (await db.getAll('workouts')).filter(w => !w.sessionId && !w.macrocycleId);
 
     openModal({
       title: '+ Novo Macrociclo Completo', size: 'xl',
       content: `
         <div style="margin-bottom:16px;border-bottom:1px solid var(--border-color);padding-bottom:16px">
-          <label class="form-label mb-sm">Templates Padrão do Sistema (clique para preencher)</label>
+          <label class="form-label mb-sm">Templates Padrão do Sistema</label>
           <div class="periodi-template-grid">
-            <div class="periodi-template-card" data-tpl='{"name":"Hipertrofia 12 Semanas","type":"linear","goal":"Hipertrofia","totalWeeks":12,"deloadEvery":4}'>
+            <div class="periodi-template-card" data-tpl='{"name":"Hipertrofia 12 Semanas","type":"linear","goal":"hypertrophy","totalWeeks":12,"deloadEvery":4}'>
               <div class="ptc-name">Hipertrofia 12 Sem.</div>
               <div class="ptc-desc">Linear · Deload a cada 4 sem · Foco em ganho de massa</div>
             </div>
-            <div class="periodi-template-card" data-tpl='{"name":"Emagrecimento 12 Semanas","type":"undulating","goal":"Emagrecimento","totalWeeks":12,"deloadEvery":4}'>
+            <div class="periodi-template-card" data-tpl='{"name":"Emagrecimento 12 Semanas","type":"concurrent","goal":"fat_loss","totalWeeks":12,"deloadEvery":4}'>
               <div class="ptc-name">Emagrecimento 12 Sem.</div>
-              <div class="ptc-desc">Ondulatório · Força + Condicionamento</div>
+              <div class="ptc-desc">Concorrente · Força + Metabólico · EPOC</div>
             </div>
-            <div class="periodi-template-card" data-tpl='{"name":"Força Máxima 16 Semanas","type":"block","goal":"Força","totalWeeks":16,"deloadEvery":4}'>
+            <div class="periodi-template-card" data-tpl='{"name":"Força Máxima 16 Semanas","type":"block","goal":"strength","totalWeeks":16,"deloadEvery":4}'>
               <div class="ptc-name">Força Máxima 16 Sem.</div>
-              <div class="ptc-desc">Bloco · Fases: Adaptação → Hipertrofia → Força</div>
+              <div class="ptc-desc">Blocos MST · Acumulação → Intensificação → Realização</div>
             </div>
-            <div class="periodi-template-card" data-tpl='{"name":"Condicionamento 8 Semanas","type":"undulating","goal":"Condicionamento","totalWeeks":8,"deloadEvery":4}'>
-              <div class="ptc-name">Condicionamento 8 Sem.</div>
-              <div class="ptc-desc">Ondulatório diário · Cardio + Força</div>
+            <div class="periodi-template-card" data-tpl='{"name":"Ondulatório DUP 8 Semanas","type":"undulating","goal":"hypertrophy","totalWeeks":8,"deloadEvery":4}'>
+              <div class="ptc-name">Ondulatório DUP 8 Sem.</div>
+              <div class="ptc-desc">DUP diário · Força/Hipertrofia/Metabólico</div>
             </div>
-            <div class="periodi-template-card" data-tpl='{"name":"Iniciante 4 Semanas","type":"linear","goal":"Saúde","totalWeeks":4,"deloadEvery":0}'>
+            <div class="periodi-template-card" data-tpl='{"name":"Iniciante 4 Semanas","type":"linear","goal":"health","totalWeeks":4,"deloadEvery":0}'>
               <div class="ptc-name">Iniciante 4 Sem.</div>
-              <div class="ptc-desc">Linear simples · Sem deload · Adaptação anatômica</div>
+              <div class="ptc-desc">Linear simples · Adaptação anatômica</div>
             </div>
-            <div class="periodi-template-card" data-tpl='{"name":"Manutenção 8 Semanas","type":"linear","goal":"Saúde","totalWeeks":8,"deloadEvery":4}'>
-              <div class="ptc-name">Manutenção 8 Sem.</div>
-              <div class="ptc-desc">Linear · Volume moderado · Saúde e qualidade de vida</div>
+            <div class="periodi-template-card" data-tpl='{"name":"Resistência Muscular 8 Sem.","type":"reverse_linear","goal":"rml","totalWeeks":8,"deloadEvery":4}'>
+              <div class="ptc-name">Resistência Muscular 8 Sem.</div>
+              <div class="ptc-desc">Linear Reversa · RML · Alto volume</div>
             </div>
           </div>
+          ${trainerTemplates.length ? `
+          <label class="form-label mt-md mb-sm" style="color:var(--primary)">📋 Seus Modelos de Treino</label>
+          <div class="periodi-template-grid">
+            ${trainerTemplates.map(w => `
+              <div class="periodi-template-card" data-tpl='${JSON.stringify({name: w.name, type: w.type || 'linear', goal: w.goal || 'hypertrophy', totalWeeks: 12, deloadEvery: 4, workoutTemplateId: w.id})}'>
+                <div class="ptc-name">${w.name}</div>
+                <div class="ptc-desc">${(w.exercises||[]).length} exercícios · ${w.goal || 'Geral'}</div>
+              </div>`).join('')}
+          </div>` : ''}
         </div>
         <form id="macroForm">
         <div class="form-row">
@@ -245,7 +255,8 @@ export function initPeriodization(navigateFn) {
           <label class="form-label">Fases do Bloco</label>
           <div class="flex gap-sm" style="flex-wrap:wrap">${MESOCYCLE_PHASES.filter(p => p.id !== 'deload').map(p => `<label class="flex items-center gap-sm" style="padding:4px 8px;border:1px solid var(--border-color);border-radius:6px;cursor:pointer"><input type="checkbox" name="phases" value="${p.id}" ${['adaptacao', 'hipertrofia', 'forca'].includes(p.id) ? 'checked' : ''}/><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${p.color}"></span>${p.name}</label>`).join('')}</div>
         </div>
-      </form>`,
+        <input type="hidden" name="workoutTemplateId" id="workoutTemplateIdField" value="" />
+      </form>`, 
       actions: [
         { label: 'Cancelar', class: 'btn-secondary', id: 'cancelMacro', onClick: () => closeModal() },
         {
@@ -267,19 +278,23 @@ export function initPeriodization(navigateFn) {
             // Generate weekly plan
             d.weeks = generateWeeklyPlan(d.type, d.totalWeeks, phases.length ? phases : null, d.deloadEvery);
 
-            // Check if personal selected existing workout model (item 14)
-            const selectedModelId = document.getElementById('workoutModelSelect')?.value;
+            // Use trainer's template if selected via template card, otherwise use exercise library
+            const selectedTemplateId = d.workoutTemplateId || '';
             let filteredExercises;
-            if (selectedModelId) {
-              const modelWk = await db.get('workouts', selectedModelId);
-              filteredExercises = modelWk?.exercises || [];
-              d.workoutModelName = modelWk?.name || '';
+            if (selectedTemplateId) {
+              const templateWk = await db.get('workouts', selectedTemplateId);
+              filteredExercises = templateWk?.exercises || [];
+              d.workoutModelName = templateWk?.name || '';
             } else {
-              // Get exercises from library for selected muscle groups
+              // Auto-select from exercise library based on goal/type
               const allExercises = await db.getAll('exercises');
-              filteredExercises = selectedGroups.length > 0
-                ? allExercises.filter(ex => selectedGroups.includes(ex.muscleGroup))
-                : allExercises;
+              // Filter by goal: exclude cardio-only exercises for strength goals, etc.
+              const goal = d.goal || 'hypertrophy';
+              const cardioGoals = ['endurance', 'fat_loss', 'concurrent'];
+              filteredExercises = allExercises.filter(ex => {
+                if (cardioGoals.includes(goal)) return true; // all exercises
+                return ex.muscleGroup !== 'Cardio'; // exclude cardio for strength/hypertrophy
+              });
             }
 
             // Generate week details for display
@@ -397,6 +412,9 @@ export function initPeriodization(navigateFn) {
             if (tpl.goal) form.querySelector('[name="goal"]').value = tpl.goal;
             if (tpl.totalWeeks !== undefined) form.querySelector('[name="totalWeeks"]').value = tpl.totalWeeks;
             if (tpl.deloadEvery !== undefined) form.querySelector('[name="deloadEvery"]').value = tpl.deloadEvery;
+            // Store trainer template id in hidden field
+            const tplField = document.getElementById('workoutTemplateIdField');
+            if (tplField) tplField.value = tpl.workoutTemplateId || '';
             // Trigger block phases visibility
             const typeChange = new Event('change');
             form.querySelector('[name="type"]')?.dispatchEvent(typeChange);
@@ -410,16 +428,6 @@ export function initPeriodization(navigateFn) {
         blockGroup.style.display = typeSel.value === 'block' ? '' : 'none';
       });
 
-      // Populate workout model dropdown when student is selected (item 14)
-      const studentSel = document.querySelector('[name="studentId"]');
-      const modelSel = document.getElementById('workoutModelSelect');
-      studentSel?.addEventListener('change', async () => {
-        const sid = studentSel.value;
-        if (!sid || !modelSel) return;
-        const wks = (await db.getAll('workouts')).filter(w => w.studentId === sid);
-        modelSel.innerHTML = '<option value="">Gerar automaticamente da biblioteca</option>' +
-          wks.map(w => `<option value="${w.id}">${w.name} (${(w.exercises||[]).length} exercícios)</option>`).join('');
-      });
     }, 100);
   });
 

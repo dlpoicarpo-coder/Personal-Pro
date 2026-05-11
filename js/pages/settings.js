@@ -5,10 +5,22 @@
 import db from '../db.js';
 import { exportBackup, importBackup } from '../utils/backup.js';
 import { notify } from '../components/toast.js';
+import { getCurrentUser } from '../utils/auth.js';
 
 export async function renderSettings() {
   const settings = await db.get('settings', 'trainer') || {};
   const currentTheme = localStorage.getItem('pp_theme') || 'dark';
+
+  // Auto-fill from Supabase auth if fields are empty
+  if (!settings.trainerEmail) {
+    try {
+      const user = await getCurrentUser();
+      if (user) {
+        if (!settings.trainerEmail) settings.trainerEmail = user.email || '';
+        if (!settings.trainerName) settings.trainerName = user.user_metadata?.full_name || user.user_metadata?.name || '';
+      }
+    } catch(_) {}
+  }
 
   return `
     <div class="page-header">
@@ -122,11 +134,17 @@ export function initSettings(navigateFn) {
     }
   });
 
-  // Theme toggle — LIGHT MODE ACTIVE
-  document.getElementById('themeSelect')?.addEventListener('change', (e) => {
+  // Theme toggle — persists per user
+  document.getElementById('themeSelect')?.addEventListener('change', async (e) => {
     const theme = e.target.value;
     localStorage.setItem('pp_theme', theme);
     document.documentElement.setAttribute('data-theme', theme);
+    // Also persist in settings record
+    try {
+      const s = await db.get('settings', 'trainer') || { id: 'trainer' };
+      s.theme = theme;
+      await db.put('settings', s);
+    } catch(_) {}
     notify.success(`Tema ${theme === 'light' ? 'claro' : 'escuro'} ativado!`);
   });
 
@@ -143,10 +161,15 @@ export function initSettings(navigateFn) {
     }
   });
 
-  // LOGOUT
-  document.getElementById('logoutSettingsBtn')?.addEventListener('click', (e) => {
+  // LOGOUT — Supabase signOut
+  document.getElementById('logoutSettingsBtn')?.addEventListener('click', async (e) => {
     e.preventDefault();
     if (window.confirm('Tem certeza que deseja sair da conta?')) {
+      try {
+        const { getSupabase } = await import('../utils/auth.js');
+        const sb = getSupabase();
+        if (sb) await sb.auth.signOut();
+      } catch(_) {}
       localStorage.removeItem('pp_session');
       const baseUrl = window.location.href.split('#')[0];
       window.location.href = baseUrl + '#/';
