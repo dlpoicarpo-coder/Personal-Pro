@@ -1,5 +1,5 @@
 // ========================================
-// PERSONAL PRO — Settings Page (v4)
+// PERSONAL PRO — Settings Page (v4.1)
 // ========================================
 
 import db from '../db.js';
@@ -11,7 +11,6 @@ export async function renderSettings() {
   const settings = await db.get('settings', 'trainer') || {};
   const currentTheme = localStorage.getItem('pp_theme') || 'dark';
 
-  // Auto-fill from Supabase auth if fields are empty
   if (!settings.trainerEmail) {
     try {
       const user = await getCurrentUser();
@@ -61,7 +60,7 @@ export async function renderSettings() {
           <div class="form-group">
             <label class="form-label">Tema do Sistema</label>
             <select id="themeSelect" class="form-select">
-              <option value="dark" ${currentTheme === 'dark' ? 'selected' : ''}>Modo Escuro</option>
+              <option value="dark"  ${currentTheme === 'dark'  ? 'selected' : ''}>Modo Escuro</option>
               <option value="light" ${currentTheme === 'light' ? 'selected' : ''}>Modo Claro</option>
             </select>
           </div>
@@ -81,8 +80,8 @@ export async function renderSettings() {
           </div>
         </div>
 
-        <div class="card" style="border-color: rgba(239, 68, 68, 0.3);">
-          <div class="card-header"><span class="card-title" style="color: var(--danger);">Zona de Perigo</span></div>
+        <div class="card" style="border-color:rgba(239,68,68,0.3)">
+          <div class="card-header"><span class="card-title" style="color:var(--danger)">Zona de Perigo</span></div>
           <div class="flex flex-col gap-sm">
             <button class="btn btn-secondary btn-sm" id="logoutSettingsBtn" style="border-color:var(--warning);color:var(--warning)">Sair da Conta (Logout)</button>
             <button class="btn btn-danger btn-sm" id="clearAllBtn">Limpar Toda a Base de Dados</button>
@@ -95,12 +94,13 @@ export async function renderSettings() {
       <div class="card-header"><span class="card-title">Sobre o Personal PRO</span></div>
       <div class="grid-2">
         <div>
-          <p class="text-sm"><strong>Versão:</strong> 2.2.0</p>
-          <p class="text-sm"><strong>Tecnologia:</strong> HTML5 + CSS3 + Vanilla JS</p>
-          <p class="text-sm"><strong>Armazenamento:</strong> Supabase (PostgreSQL)</p>
+          <p class="text-sm"><strong>Versão:</strong> 3.1.0</p>
+          <p class="text-sm"><strong>Tecnologia:</strong> HTML5 + CSS3 + Vanilla JS (ES Modules)</p>
+          <p class="text-sm"><strong>Armazenamento:</strong> Supabase (PostgreSQL) + LocalStorage offline-first</p>
+          <p class="text-sm"><strong>Hospedagem:</strong> Vercel</p>
         </div>
         <div>
-          <p class="text-sm text-muted">Sistema de Treinamento profissional para personal trainers. Gestão de alunos, prescrição de treinos, avaliações e biofeedback.</p>
+          <p class="text-sm text-muted">Sistema profissional para personal trainers. Gestão de alunos, prescrição de treinos com periodização científica completa, avaliações físicas e biofeedback.</p>
         </div>
       </div>
     </div>
@@ -108,13 +108,10 @@ export async function renderSettings() {
 }
 
 export function initSettings(navigateFn) {
-  // Save trainer info
   document.getElementById('trainerForm')?.addEventListener('submit', async (e) => {
     e.preventDefault();
     const btn = e.target.querySelector('button[type="submit"]');
-    btn.textContent = 'Salvando...';
-    btn.disabled = true;
-
+    btn.textContent = 'Salvando...'; btn.disabled = true;
     try {
       const fd = new FormData(e.target);
       const data = { id: 'trainer', ...Object.fromEntries(fd) };
@@ -129,17 +126,14 @@ export function initSettings(navigateFn) {
     } catch (err) {
       notify.error('Erro ao salvar.');
     } finally {
-      btn.textContent = 'Salvar Perfil';
-      btn.disabled = false;
+      btn.textContent = 'Salvar Perfil'; btn.disabled = false;
     }
   });
 
-  // Theme toggle — persists per user
   document.getElementById('themeSelect')?.addEventListener('change', async (e) => {
     const theme = e.target.value;
     localStorage.setItem('pp_theme', theme);
     document.documentElement.setAttribute('data-theme', theme);
-    // Also persist in settings record
     try {
       const s = await db.get('settings', 'trainer') || { id: 'trainer' };
       s.theme = theme;
@@ -148,20 +142,15 @@ export function initSettings(navigateFn) {
     notify.success(`Tema ${theme === 'light' ? 'claro' : 'escuro'} ativado!`);
   });
 
-  // Export
   document.getElementById('exportBackupBtn')?.addEventListener('click', exportBackup);
 
-  // Import
   document.getElementById('importBackupInput')?.addEventListener('change', async (e) => {
     const file = e.target.files[0];
-    if (file) {
-      if (window.confirm('Importar backup? Isso substituirá todos os dados atuais.')) {
-        await importBackup(file);
-      }
+    if (file && window.confirm('Importar backup? Isso substituirá todos os dados atuais.')) {
+      await importBackup(file);
     }
   });
 
-  // LOGOUT — Supabase signOut
   document.getElementById('logoutSettingsBtn')?.addEventListener('click', async (e) => {
     e.preventDefault();
     if (window.confirm('Tem certeza que deseja sair da conta?')) {
@@ -177,13 +166,17 @@ export function initSettings(navigateFn) {
     }
   });
 
-  // Clear all
   document.getElementById('clearAllBtn')?.addEventListener('click', async () => {
     if (window.confirm('ATENÇÃO: Isso apagará TODOS os dados permanentemente. Deseja continuar?')) {
       if (window.confirm('Tem certeza? Essa ação NÃO pode ser desfeita!')) {
         try {
-          const stores = ['students', 'workouts', 'exercises', 'assessments', 'biofeedback', 'anamnesis', 'cycles', 'sessions', 'macrocycles', 'financial', 'schedules'];
-          for (const s of stores) await db.clear(s);
+          // Lista completa de todas as stores usadas no sistema
+          const stores = [
+            'students', 'workouts', 'exercises', 'assessments', 'biofeedback',
+            'anamneses', 'anamnesis', 'cycles', 'sessions', 'macrocycles',
+            'prescriptions', 'financial', 'schedules', 'events'
+          ];
+          for (const s of stores) await db.clear(s).catch(() => {});
           notify.success('Base de dados limpa. Reiniciando...');
           setTimeout(() => {
             localStorage.clear();
