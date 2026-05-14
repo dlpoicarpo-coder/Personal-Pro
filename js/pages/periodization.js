@@ -520,7 +520,8 @@ export function initPeriodization(navigateFn) {
             const sessions = selectedTemplate.sessions || [{ name: selectedTemplate.name, exercises: selectedTemplate.exercises || [] }];
             const allExercises = sessions.flatMap(s => s.exercises);
 
-            d.weekDetails = d.weeks.map((w, i) => {
+            d.weekDetails = (d.weeks || []).map((w, i) => {
+              if (!w) return null;
               const isDeload = w.phase === 'deload';
               const prevWeek = i > 0 ? d.weeks[i-1] : null;
               return {
@@ -533,20 +534,21 @@ export function initPeriodization(navigateFn) {
                 trainA: allExercises.slice(0,3).map(e=>e.name).join(', ') || '-',
                 trainB: allExercises.slice(3,6).map(e=>e.name).join(', ') || '-',
               };
-            });
+            }).filter(Boolean);
 
             const savedMacro = await db.add('macrocycles', d);
             d.id = savedMacro.id;
             d.generatedWorkouts = 0;
 
             for (let w = 0; w < d.totalWeeks; w++) {
-              const weekPlan = d.weeks[w];
+              const weekPlan = d.weeks[w] || {
+                week: w + 1, phase: 'training', label: 'Treino',
+                intensityPct: 65 + Math.round((w / d.totalWeeks) * 25),
+                volumePct: 70, repsRange: '10-12'
+              };
               const weekStart = new Date(d.startDate);
               weekStart.setDate(weekStart.getDate() + (w * 7));
 
-              // Progressão científica baseada no modelo:
-              // Semana 1 = carga base informada (100%)
-              // Progressão proporcional à intensidade do modelo
               const baseIntensity = d.weeks[0]?.intensityPct || 60;
               const isDeload = weekPlan.phase === 'deload';
               const loadMultiplier = isDeload
