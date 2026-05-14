@@ -202,6 +202,7 @@ document.getElementById('addMacroBtn')?.addEventListener('click', async () => {
 
     // Treinos criados pelo personal na aba Treinos (sem sessionId, sem macrocycleId = são modelos/templates)
     const trainerWorkouts = (await db.getAll('workouts')).filter(w => !w.sessionId && !w.macrocycleId);
+    const muscleGroups = ['Peito', 'Costas', 'Ombros', 'Bíceps', 'Tríceps', 'Quadríceps', 'Posterior', 'Glúteos', 'Core'];
 
     // Montar HTML dos templates padrão agrupados por categoria
     const systemTemplatesHTML = SYSTEM_TEMPLATES.map(cat => `
