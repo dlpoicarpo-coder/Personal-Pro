@@ -4,11 +4,47 @@
 // ========================================
 import db from '../db.js';
 import { Calc } from '../utils/calculations.js';
-import { PERIODIZATION_TYPES, MESOCYCLE_PHASES, generateWeeklyPlan } from '../utils/periodization-models.js';
-import { generateWorkouts } from '../utils/workout-generator.js';
 import { openModal, closeModal } from '../components/modal.js';
 import { notify } from '../components/toast.js';
-import { generateProgression, PERIODIZATION_MODELS, TRAINING_GOALS, formatRest, intensityColor } from '../utils/periodization-engine.js';
+import { PERIODIZATION_MODELS } from '../utils/periodization-engine.js';
+
+// ── GERADOR DE SEMANAS INTERNO ─────────────────────────────
+function generateInternalWeeklyPlan(modelType, totalWeeks, deloadEvery) {
+  const models = {
+    linear:        { start: 55, end: 92, volStart: 85, volEnd: 55 },
+    reverse_linear:{ start: 85, end: 50, volStart: 55, volEnd: 90 },
+    undulating:    { start: 60, end: 85, volStart: 80, volEnd: 70 },
+    block:         { start: 60, end: 95, volStart: 90, volEnd: 45 },
+    conjugate:     { start: 70, end: 90, volStart: 75, volEnd: 65 },
+    concurrent:    { start: 60, end: 78, volStart: 80, volEnd: 75 },
+    polarized:     { start: 55, end: 80, volStart: 85, volEnd: 70 },
+    hiit:          { start: 65, end: 90, volStart: 80, volEnd: 65 },
+    lsd:           { start: 50, end: 70, volStart: 90, volEnd: 80 },
+    threshold:     { start: 60, end: 82, volStart: 85, volEnd: 70 },
+    fartlek:       { start: 58, end: 80, volStart: 82, volEnd: 68 },
+  };
+  const m = models[modelType] || models.linear;
+  const weeks = [];
+
+  for (let w = 1; w <= totalWeeks; w++) {
+    // Só deload se deloadEvery > 0
+    const isDeload = deloadEvery > 0 && w % deloadEvery === 0;
+    const progress = (w - 1) / Math.max(totalWeeks - 1, 1);
+
+    if (isDeload) {
+      weeks.push({ week: w, phase: 'deload', label: 'Deload', intensityPct: 50, volumePct: 40, repsRange: '12-15' });
+    } else {
+      const intensityPct = Math.round(m.start + (m.end - m.start) * progress);
+      const volumePct    = Math.round(m.volStart + (m.volEnd - m.volStart) * progress);
+      const repsRange    = intensityPct >= 88 ? '2-4' : intensityPct >= 78 ? '4-6' :
+                           intensityPct >= 68 ? '6-10' : intensityPct >= 58 ? '10-12' : '12-15';
+      const phase = intensityPct >= 85 ? 'Pico' : intensityPct >= 75 ? 'Força' :
+                    intensityPct >= 65 ? 'Hipertrofia' : 'Adaptação';
+      weeks.push({ week: w, phase, label: `Semana ${w}`, intensityPct, volumePct, repsRange });
+    }
+  }
+  return weeks;
+}
 
 const TRAINING_DAYS = [
   { id: 0, label: 'Dom' }, { id: 1, label: 'Seg' }, { id: 2, label: 'Ter' },
@@ -486,10 +522,11 @@ export function initPeriodization(navigateFn) {
 
             <!-- Preview cargas -->
             <div id="tplPreview" style="display:none;margin-top:12px;padding-top:12px;border-top:1px solid var(--border-color)">
-              <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
                 <span style="display:inline-block;width:3px;height:16px;background:var(--accent);border-radius:2px"></span>
-                <span style="font-size:0.7rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-muted)">Cargas iniciais por exercício</span>
+                <span style="font-size:0.7rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-muted)">1RM Estimado por exercício</span>
               </div>
+              <p style="font-size:0.7rem;color:var(--text-muted);margin-bottom:8px">Informe o 1RM (ou estimativa). O sistema calculará as cargas de treino semana a semana com base na % do modelo de periodização.</p>
               <div id="tplExerciseLoads"></div>
             </div>
           </div>
@@ -505,13 +542,15 @@ export function initPeriodization(navigateFn) {
             if (!selectedTemplate) { notify.error('Selecione um modelo de treino à esquerda'); return; }
 
             d.totalWeeks = parseInt(d.totalWeeks) || 12;
-            d.deloadEvery = parseInt(d.deloadEvery) || 4;
+            d.deloadEvery = d.deloadEvery === '' ? 4 : parseInt(d.deloadEvery); // 0 = sem deload
             d.trainingDays = fd.getAll('trainingDays').map(Number);
             d.sessionDuration = parseInt(d.sessionDuration) || 60;
             d.status = 'active';
             d.createdAt = new Date().toISOString();
             d.workoutModelName = selectedTemplate.name;
-            d.weeks = generateWeeklyPlan(d.type, d.totalWeeks, null, d.deloadEvery);
+
+            // Gerar plano semanal interno (não depende de generateWeeklyPlan)
+            d.weeks = generateInternalWeeklyPlan(d.type, d.totalWeeks, d.deloadEvery);
 
             const loadInputs = document.querySelectorAll('.load-input');
             const exerciseLoads = {};
@@ -567,11 +606,25 @@ export function initPeriodization(navigateFn) {
                 else if (diff < 0) diff += 7;
                 date.setDate(date.getDate() + diff);
 
-                const wkExercises = session.exercises.map(ex => ({
-                  ...ex,
-                  load: Math.round((exerciseLoads[ex.name] || 20) * loadMultiplier * 2) / 2,
-                  week: w + 1,
-                }));
+                const wkExercises = session.exercises.map(ex => {
+                  const oneRM = exerciseLoads[ex.name] || 60;
+                  const exType = document.querySelector(`.load-input[data-ex-key="${ex.name}"]`)?.dataset.type || 'weight';
+
+                  let load;
+                  if (exType === 'time') {
+                    // Tempo: aumenta proporcionalmente com a intensidade
+                    load = Math.round(oneRM * loadMultiplier);
+                  } else if (exType === 'bodyweight') {
+                    // Peso corporal: carga adicional aumenta
+                    load = Math.round(oneRM * loadMultiplier * 2) / 2;
+                  } else {
+                    // Carga = 1RM × % intensidade da semana
+                    load = Math.round(oneRM * (weekPlan.intensityPct / 100) * 2) / 2;
+                    if (isDeload) load = Math.round(oneRM * 0.5 * 2) / 2;
+                  }
+
+                  return { ...ex, load, oneRM, week: w + 1 };
+                });
 
                 const savedWorkout = await db.add('workouts', {
                   studentId: d.studentId,
@@ -669,7 +722,7 @@ function renderLoadInputs(exercises) {
   if (!preview || !container || !exercises.length) return;
   preview.style.display = '';
 
-  const BODYWEIGHT_KEYWORDS = ['prancha','flexão','burpee','agachamento livre sem peso','barra fixa','pull-up','dip','afundo','superman','bird dog','russian twist','abdominal','crunch','mountain climber','jumping jack','polichinelo'];
+  const BODYWEIGHT_KEYWORDS = ['prancha','flexão','burpee','barra fixa','pull-up','dip','afundo','superman','bird dog','russian twist','abdominal','crunch','mountain climber','jumping jack','polichinelo','ponte'];
   const TIMED_PATTERN = /^\d+s$/i;
 
   container.innerHTML = exercises.map(ex => {
@@ -678,7 +731,6 @@ function renderLoadInputs(exercises) {
     const isBodyweight = BODYWEIGHT_KEYWORDS.some(k => nameLower.includes(k));
 
     if (isTimed) {
-      // Exercício por tempo — mostrar segundos
       const defaultSec = parseInt(String(ex.reps).replace('s','')) || 30;
       return `
         <div style="display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border-color)">
@@ -690,13 +742,12 @@ function renderLoadInputs(exercises) {
             <input class="form-input load-input" data-ex-key="${ex.name}" data-type="time"
               type="number" min="5" step="5" value="${defaultSec}"
               style="width:68px;text-align:center;padding:4px 8px;font-size:0.82rem" />
-            <span style="font-size:0.72rem;color:var(--text-muted);min-width:18px">seg</span>
+            <span style="font-size:0.72rem;color:var(--text-muted);min-width:22px">seg</span>
           </div>
         </div>`;
     }
 
     if (isBodyweight) {
-      // Peso corporal — progressão por dificuldade ou carga adicional opcional
       return `
         <div style="display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border-color)">
           <div style="flex:1">
@@ -712,18 +763,32 @@ function renderLoadInputs(exercises) {
         </div>`;
     }
 
-    // Exercício com carga externa — kg
+    // Exercício com carga — input de 1RM com preview da carga de treino
     return `
-      <div style="display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border-color)">
-        <div style="flex:1">
-          <div style="font-size:0.82rem;font-weight:500;color:var(--text-primary)">${ex.name}</div>
-          <div style="font-size:0.68rem;color:var(--text-muted);margin-top:1px">${ex.sets} séries × ${ex.reps} reps · ${ex.rest}s descanso</div>
-        </div>
-        <div style="display:flex;align-items:center;gap:6px;margin-left:12px">
-          <input class="form-input load-input" data-ex-key="${ex.name}" data-type="weight"
-            type="number" min="0" step="0.5" value="20"
-            style="width:68px;text-align:center;padding:4px 8px;font-size:0.82rem" />
-          <span style="font-size:0.72rem;color:var(--text-muted);min-width:18px">kg</span>
+      <div style="padding:7px 0;border-bottom:1px solid var(--border-color)">
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <div style="flex:1">
+            <div style="font-size:0.82rem;font-weight:500;color:var(--text-primary)">${ex.name}</div>
+            <div style="font-size:0.68rem;color:var(--text-muted);margin-top:1px">${ex.sets} séries × ${ex.reps} · ${ex.rest}s descanso</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;margin-left:12px">
+            <div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px">
+              <div style="display:flex;align-items:center;gap:4px">
+                <span style="font-size:0.68rem;color:var(--text-muted)">1RM</span>
+                <input class="form-input load-input" data-ex-key="${ex.name}" data-type="weight"
+                  type="number" min="0" step="2.5" value="60"
+                  style="width:68px;text-align:center;padding:4px 8px;font-size:0.82rem"
+                  oninput="
+                    const pct = 65;
+                    const load = Math.round(parseFloat(this.value || 0) * (pct/100) * 2) / 2;
+                    const el = this.closest('div').querySelector('.load-preview');
+                    if(el) el.textContent = 'Semana 1: ~' + load + 'kg (' + pct + '% 1RM)';
+                  " />
+                <span style="font-size:0.72rem;color:var(--text-muted)">kg</span>
+              </div>
+              <span class="load-preview" style="font-size:0.65rem;color:var(--primary)">Semana 1: ~39kg (65% 1RM)</span>
+            </div>
+          </div>
         </div>
       </div>`;
   }).join('');
