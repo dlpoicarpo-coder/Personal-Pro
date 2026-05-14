@@ -333,107 +333,163 @@ export function initPeriodization(navigateFn) {
     let selectedTemplate = null;
 
     const builtInHTML = BUILT_IN_WORKOUT_TEMPLATES.map(t => `
-      <div class="periodo-tpl-card" data-tpl-id="${t.id}" style="padding:10px 12px;border:1px solid var(--border-color);border-radius:7px;cursor:pointer;transition:border-color 0.15s,background 0.15s">
-        <div style="font-weight:600;font-size:0.84rem">${t.name}</div>
-        <div style="font-size:0.72rem;color:var(--text-muted);margin-top:2px">${t.desc}</div>
-        <div style="font-size:0.68rem;color:var(--text-muted);margin-top:3px">${t.sessions.length} sessões · ${t.sessions.reduce((a,s) => a + s.exercises.length, 0)} exercícios</div>
+      <div class="periodo-tpl-card" data-tpl-id="${t.id}" style="
+        padding:10px 14px;
+        border:1px solid var(--border-color);
+        border-radius:var(--radius-md);
+        cursor:pointer;
+        transition:border-color var(--transition-fast),background var(--transition-fast);
+        background:var(--bg-card)">
+        <div style="font-weight:600;font-size:0.85rem;color:var(--text-primary)">${t.name}</div>
+        <div style="font-size:0.72rem;color:var(--text-muted);margin-top:3px">${t.desc}</div>
+        <div style="font-size:0.68rem;color:var(--text-muted);margin-top:4px;display:flex;gap:8px">
+          <span style="color:var(--accent)">${t.sessions.length} sessões</span>
+          <span>·</span>
+          <span>${t.sessions.reduce((a,s) => a + s.exercises.length, 0)} exercícios</span>
+        </div>
       </div>`).join('');
 
     const personalHTML = customCycles.length
       ? customCycles.map(c => {
           const totalEx = (c.workouts || []).reduce((a, w) => a + (w.exercises || []).length, 0);
           return `
-          <div class="periodo-tpl-card" data-tpl-id="cycle_${c.id}" style="padding:10px 12px;border:1px solid var(--border-color);border-radius:7px;cursor:pointer;transition:border-color 0.15s,background 0.15s">
-            <div style="font-weight:600;font-size:0.84rem">${c.name}</div>
-            <div style="font-size:0.72rem;color:var(--text-muted);margin-top:2px">${c.goal || 'Geral'} · ${(c.workouts||[]).length} treinos · ${totalEx} exercícios</div>
-            ${c.description ? `<div style="font-size:0.68rem;color:var(--text-muted);margin-top:2px">${c.description}</div>` : ''}
+          <div class="periodo-tpl-card" data-tpl-id="cycle_${c.id}" style="
+            padding:10px 14px;
+            border:1px solid var(--border-color);
+            border-radius:var(--radius-md);
+            cursor:pointer;
+            transition:border-color var(--transition-fast),background var(--transition-fast);
+            background:var(--bg-card)">
+            <div style="font-weight:600;font-size:0.85rem;color:var(--text-primary)">${c.name}</div>
+            <div style="font-size:0.72rem;color:var(--text-muted);margin-top:3px;display:flex;gap:8px">
+              <span style="color:var(--primary)">${c.goal || 'Geral'}</span>
+              <span>·</span>
+              <span>${(c.workouts||[]).length} treinos</span>
+              <span>·</span>
+              <span>${totalEx} exercícios</span>
+            </div>
+            ${c.description ? `<div style="font-size:0.68rem;color:var(--text-muted);margin-top:3px">${c.description}</div>` : ''}
           </div>`;}).join('')
-      : `<p class="text-xs text-muted" style="padding:8px 0">Nenhum modelo criado. Vá em <a href="#/exercicios" style="color:var(--primary)">Exercícios → Meus Modelos</a> para criar.</p>`;
+      : `<div style="padding:12px;border:1px dashed var(--border-color);border-radius:var(--radius-md);text-align:center">
+          <p class="text-xs text-muted" style="margin:0">Nenhum modelo criado ainda.</p>
+          <a href="#/exercicios" style="font-size:0.75rem;color:var(--primary);text-decoration:none">Ir para Exercícios → Meus Modelos</a>
+        </div>`;
 
     openModal({
       title: 'Novo Macrociclo', size: 'xl',
       content: `
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:28px;align-items:start">
 
+          <!-- COLUNA ESQUERDA: Modelo de Treino -->
           <div>
-            <div class="form-label" style="margin-bottom:10px">Modelo de treino *</div>
-            <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:14px" id="builtInTpls">${builtInHTML}</div>
-            <div class="form-label" style="margin-bottom:8px;border-top:1px solid var(--border-color);padding-top:12px">Seus modelos</div>
-            <div style="display:flex;flex-direction:column;gap:6px" id="personalTpls">${personalHTML}</div>
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+              <span style="display:inline-block;width:3px;height:16px;background:var(--primary);border-radius:2px"></span>
+              <span style="font-size:0.7rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-muted)">Modelo de Treino</span>
+            </div>
+
+            <p class="text-xs text-muted mb-sm">Templates padrão do sistema</p>
+            <div style="display:flex;flex-direction:column;gap:5px;margin-bottom:16px" id="builtInTpls">${builtInHTML}</div>
+
+            <div style="border-top:1px solid var(--border-color);padding-top:14px;margin-top:4px">
+              <p class="text-xs text-muted mb-sm">Seus modelos <span style="color:var(--text-muted);font-size:0.65rem">(Exercícios → Meus Modelos)</span></p>
+              <div style="display:flex;flex-direction:column;gap:5px" id="personalTpls">${personalHTML}</div>
+            </div>
           </div>
 
+          <!-- COLUNA DIREITA: Configuração -->
           <div>
-            <div class="form-label" style="margin-bottom:10px">Configuração</div>
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+              <span style="display:inline-block;width:3px;height:16px;background:var(--primary);border-radius:2px"></span>
+              <span style="font-size:0.7rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-muted)">Configuração</span>
+            </div>
+
             <form id="macroForm">
               <div class="form-group">
                 <label class="form-label">Aluno *</label>
                 <select class="form-select" name="studentId" required>
-                  <option value="">Selecione</option>
+                  <option value="">Selecione o aluno</option>
                   ${students.map(s => `<option value="${s.id}">${s.name}</option>`).join('')}
                 </select>
               </div>
+
               <div class="form-group">
-                <label class="form-label">Nome</label>
-                <input class="form-input" name="name" value="Macrociclo 1" />
+                <label class="form-label">Nome do macrociclo</label>
+                <input class="form-input" name="name" value="Macrociclo 1" placeholder="Ex: Macrociclo 1 — Hipertrofia" />
               </div>
+
               <div class="form-group">
                 <label class="form-label">Modelo de periodização *</label>
                 <select class="form-select" name="type">
-                  <optgroup label="Musculação">
+                  <optgroup label="── Musculação ──">
                     <option value="linear">Linear — Volume↓ Intensidade↑</option>
                     <option value="reverse_linear">Linear Reversa — RML / Resistência</option>
-                    <option value="undulating">Ondulatória (DUP)</option>
-                    <option value="block">Em Blocos — Acum. → Intens. → Realiz.</option>
-                    <option value="conjugate">Conjugada</option>
+                    <option value="undulating">Ondulatória (DUP) — Oscilações diárias</option>
+                    <option value="block">Em Blocos — Acumulação → Intensificação → Realização</option>
+                    <option value="conjugate">Conjugada — Esforço Máximo + Dinâmico</option>
                     <option value="concurrent">Concorrente — Força + Metabólico</option>
                   </optgroup>
-                  <optgroup label="Cardio / Endurance">
+                  <optgroup label="── Cardio / Endurance ──">
                     <option value="polarized">Polarizado — 80% Z1/Z2 + 20% Z4/Z5</option>
-                    <option value="hiit">HIIT</option>
-                    <option value="lsd">LSD — Longa Duração Baixa Intensidade</option>
+                    <option value="hiit">HIIT — Intervalado de Alta Intensidade</option>
+                    <option value="lsd">LSD — Longa Duração e Baixa Intensidade</option>
                     <option value="threshold">Limiar Anaeróbio</option>
-                    <option value="fartlek">Fartlek</option>
+                    <option value="fartlek">Fartlek — Variações de ritmo livres</option>
                   </optgroup>
                 </select>
               </div>
+
               <div class="form-row">
                 <div class="form-group">
-                  <label class="form-label">Semanas</label>
+                  <label class="form-label">Duração (semanas)</label>
                   <input class="form-input" name="totalWeeks" type="number" min="4" max="52" value="12" />
                 </div>
                 <div class="form-group">
-                  <label class="form-label">Deload a cada</label>
+                  <label class="form-label">Deload a cada (sem)</label>
                   <input class="form-input" name="deloadEvery" type="number" min="0" max="8" value="4" />
                   <div class="form-hint">0 = sem deload</div>
                 </div>
               </div>
+
               <div class="form-group">
-                <label class="form-label">Início</label>
+                <label class="form-label">Data de início</label>
                 <input class="form-input" name="startDate" type="date" value="${new Date().toISOString().slice(0,10)}" />
               </div>
+
               <div class="form-group">
                 <label class="form-label">Dias de treino</label>
-                <div class="flex gap-sm" style="flex-wrap:wrap">
-                  ${TRAINING_DAYS.map(d => `<label style="display:flex;align-items:center;gap:4px;padding:4px 9px;border:1px solid var(--border-color);border-radius:6px;cursor:pointer;font-size:0.78rem"><input type="checkbox" name="trainingDays" value="${d.id}" ${[1,3,5].includes(d.id)?'checked':''}/>${d.label}</label>`).join('')}
+                <div style="display:flex;flex-wrap:wrap;gap:6px">
+                  ${TRAINING_DAYS.map(d => `
+                    <label style="display:flex;align-items:center;gap:5px;padding:5px 11px;border:1px solid var(--border-color);border-radius:var(--radius-sm);cursor:pointer;font-size:0.8rem;transition:border-color var(--transition-fast),background var(--transition-fast)">
+                      <input type="checkbox" name="trainingDays" value="${d.id}" ${[1,3,5].includes(d.id)?'checked':''}/>${d.label}
+                    </label>`).join('')}
                 </div>
               </div>
+
               <div class="form-row">
                 <div class="form-group">
                   <label class="form-label">Horário</label>
-                  <select class="form-select" name="trainingTime">${HOURS.map(h=>`<option value="${h}" ${h==='07:00'?'selected':''}>${h}</option>`).join('')}</select>
+                  <select class="form-select" name="trainingTime">
+                    ${HOURS.map(h=>`<option value="${h}" ${h==='07:00'?'selected':''}>${h}</option>`).join('')}
+                  </select>
                 </div>
                 <div class="form-group">
-                  <label class="form-label">Duração</label>
+                  <label class="form-label">Duração da sessão</label>
                   <select class="form-select" name="sessionDuration">
-                    <option value="45">45 min</option><option value="60" selected>60 min</option>
-                    <option value="75">75 min</option><option value="90">90 min</option>
+                    <option value="45">45 min</option>
+                    <option value="60" selected>60 min</option>
+                    <option value="75">75 min</option>
+                    <option value="90">90 min</option>
                   </select>
                 </div>
               </div>
             </form>
 
-            <div id="tplPreview" style="display:none;margin-top:8px;border-top:1px solid var(--border-color);padding-top:10px">
-              <div class="form-label" style="margin-bottom:8px">Cargas iniciais por exercício</div>
+            <!-- Preview cargas -->
+            <div id="tplPreview" style="display:none;margin-top:12px;padding-top:12px;border-top:1px solid var(--border-color)">
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+                <span style="display:inline-block;width:3px;height:16px;background:var(--accent);border-radius:2px"></span>
+                <span style="font-size:0.7rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-muted)">Cargas iniciais por exercício</span>
+              </div>
               <div id="tplExerciseLoads"></div>
             </div>
           </div>
@@ -487,14 +543,27 @@ export function initPeriodization(navigateFn) {
               const weekPlan = d.weeks[w];
               const weekStart = new Date(d.startDate);
               weekStart.setDate(weekStart.getDate() + (w * 7));
-              const loadMultiplier = weekPlan.phase === 'deload' ? 0.6 : 0.85 + ((weekPlan.intensityPct - 60) / 200);
+
+              // Progressão científica baseada no modelo:
+              // Semana 1 = carga base informada (100%)
+              // Progressão proporcional à intensidade do modelo
+              const baseIntensity = d.weeks[0]?.intensityPct || 60;
+              const isDeload = weekPlan.phase === 'deload';
+              const loadMultiplier = isDeload
+                ? 0.6
+                : 1 + ((weekPlan.intensityPct - baseIntensity) / 100);
 
               for (let di = 0; di < d.trainingDays.length; di++) {
                 const session = sessions[di % sessions.length];
                 const dayOfWeek = d.trainingDays[di];
                 const date = new Date(weekStart);
-                const diff = dayOfWeek - date.getDay();
-                date.setDate(date.getDate() + (diff >= 0 ? diff : diff + 7));
+                const currentDay = date.getDay();
+
+                // Corrigir cálculo de data: nunca voltar para semana anterior
+                let diff = dayOfWeek - currentDay;
+                if (w === 0 && diff < 0) diff += 7; // primeira semana: avança para próxima ocorrência
+                else if (diff < 0) diff += 7;
+                date.setDate(date.getDate() + diff);
 
                 const wkExercises = session.exercises.map(ex => ({
                   ...ex,
@@ -539,13 +608,27 @@ export function initPeriodization(navigateFn) {
 
     setTimeout(() => {
       document.querySelectorAll('.periodo-tpl-card').forEach(card => {
+        card.addEventListener('mouseenter', () => {
+          if (!card.classList.contains('selected')) {
+            card.style.borderColor = 'var(--border-active)';
+            card.style.background = 'var(--bg-card-hover)';
+          }
+        });
+        card.addEventListener('mouseleave', () => {
+          if (!card.classList.contains('selected')) {
+            card.style.borderColor = 'var(--border-color)';
+            card.style.background = 'var(--bg-card)';
+          }
+        });
         card.addEventListener('click', () => {
           document.querySelectorAll('.periodo-tpl-card').forEach(c => {
+            c.classList.remove('selected');
             c.style.borderColor = 'var(--border-color)';
-            c.style.background = '';
+            c.style.background = 'var(--bg-card)';
           });
+          card.classList.add('selected');
           card.style.borderColor = 'var(--primary)';
-          card.style.background = 'rgba(16,185,129,0.05)';
+          card.style.background = 'var(--primary-glow)';
 
           const tplId = card.dataset.tplId;
           if (tplId.startsWith('cycle_')) {
@@ -583,19 +666,65 @@ function renderLoadInputs(exercises) {
   const container = document.getElementById('tplExerciseLoads');
   if (!preview || !container || !exercises.length) return;
   preview.style.display = '';
-  container.innerHTML = exercises.map(ex => `
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border-color)">
-      <div>
-        <div style="font-size:0.8rem;font-weight:500">${ex.name}</div>
-        <div style="font-size:0.68rem;color:var(--text-muted)">${ex.sets}×${ex.reps} · ${ex.rest}s</div>
-      </div>
-      <div style="display:flex;align-items:center;gap:5px">
-        <input class="form-input load-input" data-ex-key="${ex.name}"
-          type="number" min="0" step="0.5" value="20"
-          style="width:65px;text-align:center;padding:3px 6px;font-size:0.82rem" />
-        <span style="font-size:0.7rem;color:var(--text-muted)">kg</span>
-      </div>
-    </div>`).join('');
+
+  const BODYWEIGHT_KEYWORDS = ['prancha','flexão','burpee','agachamento livre sem peso','barra fixa','pull-up','dip','afundo','superman','bird dog','russian twist','abdominal','crunch','mountain climber','jumping jack','polichinelo'];
+  const TIMED_PATTERN = /^\d+s$/i;
+
+  container.innerHTML = exercises.map(ex => {
+    const nameLower = ex.name.toLowerCase();
+    const isTimed = TIMED_PATTERN.test(String(ex.reps || ''));
+    const isBodyweight = BODYWEIGHT_KEYWORDS.some(k => nameLower.includes(k));
+
+    if (isTimed) {
+      // Exercício por tempo — mostrar segundos
+      const defaultSec = parseInt(String(ex.reps).replace('s','')) || 30;
+      return `
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border-color)">
+          <div style="flex:1">
+            <div style="font-size:0.82rem;font-weight:500;color:var(--text-primary)">${ex.name}</div>
+            <div style="font-size:0.68rem;color:var(--accent);margin-top:1px">Isométrico · ${ex.sets} séries × ${ex.reps}</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;margin-left:12px">
+            <input class="form-input load-input" data-ex-key="${ex.name}" data-type="time"
+              type="number" min="5" step="5" value="${defaultSec}"
+              style="width:68px;text-align:center;padding:4px 8px;font-size:0.82rem" />
+            <span style="font-size:0.72rem;color:var(--text-muted);min-width:18px">seg</span>
+          </div>
+        </div>`;
+    }
+
+    if (isBodyweight) {
+      // Peso corporal — progressão por dificuldade ou carga adicional opcional
+      return `
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border-color)">
+          <div style="flex:1">
+            <div style="font-size:0.82rem;font-weight:500;color:var(--text-primary)">${ex.name}</div>
+            <div style="font-size:0.68rem;color:var(--success);margin-top:1px">Peso corporal · ${ex.sets} séries × ${ex.reps} reps</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;margin-left:12px">
+            <input class="form-input load-input" data-ex-key="${ex.name}" data-type="bodyweight"
+              type="number" min="0" step="0.5" value="0"
+              style="width:68px;text-align:center;padding:4px 8px;font-size:0.82rem" />
+            <span style="font-size:0.72rem;color:var(--text-muted);min-width:24px">+kg</span>
+          </div>
+        </div>`;
+    }
+
+    // Exercício com carga externa — kg
+    return `
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border-color)">
+        <div style="flex:1">
+          <div style="font-size:0.82rem;font-weight:500;color:var(--text-primary)">${ex.name}</div>
+          <div style="font-size:0.68rem;color:var(--text-muted);margin-top:1px">${ex.sets} séries × ${ex.reps} reps · ${ex.rest}s descanso</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;margin-left:12px">
+          <input class="form-input load-input" data-ex-key="${ex.name}" data-type="weight"
+            type="number" min="0" step="0.5" value="20"
+            style="width:68px;text-align:center;padding:4px 8px;font-size:0.82rem" />
+          <span style="font-size:0.72rem;color:var(--text-muted);min-width:18px">kg</span>
+        </div>
+      </div>`;
+  }).join('');
 }
 
 async function initMacroCharts() {
