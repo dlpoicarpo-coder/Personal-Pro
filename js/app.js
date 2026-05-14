@@ -118,6 +118,12 @@ export async function navigateTo(path) {
     document.documentElement.setAttribute('data-theme', theme);
     const themeSelect = document.getElementById('themeSelect');
     if (themeSelect) themeSelect.value = theme;
+
+    // Iniciar polling de notificações
+    try {
+      const { startNotificationPolling } = await import('./utils/notifications-manager.js');
+      startNotificationPolling();
+    } catch(e) { console.warn('Notification polling error:', e); }
   }
 
   // ── HIGHLIGHT ACTIVE MENU ──
