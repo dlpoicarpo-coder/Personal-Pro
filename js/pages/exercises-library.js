@@ -1,5 +1,5 @@
 // ========================================
-// PERSONAL PRO — Exercises & Templates Library
+// PERSONAL PRO — Exercises & Templates Library v.2
 // ========================================
 import db from '../db.js';
 import { openModal, closeModal } from '../components/modal.js';
