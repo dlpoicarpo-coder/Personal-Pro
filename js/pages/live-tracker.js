@@ -75,9 +75,9 @@ export async function renderTracker() {
       <div class="card">
         <div class="card-header"><span class="card-title">Pré-Treino (preenchido pelo personal)</span></div>
         <p class="text-muted text-sm mb-md">Ou peça ao aluno para preencher pelo link abaixo</p>
-        ${['sleep|Sono','mood|Humor','energy|Disposição','stress|Estresse','pain|Dor'].map(f => {
-          const [n, l] = f.split('|');
-          return `<div class="form-group" style="margin-bottom:8px"><div class="flex items-center justify-between"><label class="form-label" style="margin:0">${l}</label><span class="text-gradient" style="font-weight:700" id="preVal_${n}">5</span></div><input type="range" min="1" max="10" value="5" id="pre_${n}" style="width:100%" oninput="document.getElementById('preVal_${n}').textContent=this.value" /></div>`;
+        ${['sleep|Sono|Como dormiu?','mood|Disposição|Como está hoje?','energy|Energia|Nível de energia','stress|Estresse|Nível de estresse','pain|Dor|Sente alguma dor?'].map(f => {
+          const [n, l, desc] = f.split('|');
+          return `<div class="form-group" style="margin-bottom:8px"><div class="flex items-center justify-between"><label class="form-label" style="margin:0" title="${desc}">${l}</label><span class="text-gradient" style="font-weight:700" id="preVal_${n}">5</span></div><input type="range" min="1" max="10" value="5" id="pre_${n}" style="width:100%" oninput="document.getElementById('preVal_${n}').textContent=this.value" /></div>`;
         }).join('')}
         <button class="btn btn-secondary btn-sm mt-md" id="genPreLinkBtn" style="width:100%">Gerar link para o aluno preencher</button>
       </div>
