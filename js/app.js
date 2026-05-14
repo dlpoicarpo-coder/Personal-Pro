@@ -103,7 +103,6 @@ export async function navigateTo(path) {
   const user = await getCurrentUser();
   if (user) {
     db.setUser(user);
-    // Use saved profile name, fallback to auth metadata
     const savedSettings = await db.get('settings', 'trainer').catch(() => null) || {};
     const trainerName = savedSettings.trainerName || user.user_metadata?.trainer_name || user.email;
     const nameEl = document.getElementById('trainerName');
@@ -113,11 +112,12 @@ export async function navigateTo(path) {
       const initials = trainerName.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
       avatarEl.textContent = initials;
     }
-    // Restore saved theme
-    if (savedSettings.theme) {
-      localStorage.setItem('pp_theme', savedSettings.theme);
-      document.documentElement.setAttribute('data-theme', savedSettings.theme);
-    }
+    // Restore saved theme — busca do banco primeiro (persiste entre navegadores)
+    const theme = savedSettings.theme || localStorage.getItem('pp_theme') || 'dark';
+    localStorage.setItem('pp_theme', theme);
+    document.documentElement.setAttribute('data-theme', theme);
+    const themeSelect = document.getElementById('themeSelect');
+    if (themeSelect) themeSelect.value = theme;
   }
 
   // ── HIGHLIGHT ACTIVE MENU ──
