@@ -523,7 +523,116 @@ export function initTracker(navigateFn) {
   });
 }
 
-async function finishSession(dur, vol, dens, post, navigateFn) {
+function generateSessionPDF(session, student) {
+  try {
+    const { jsPDF } = window.jspdf;
+    if (!jsPDF) { notify.error('jsPDF não disponível'); return; }
+    const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+
+    const primary = [16, 185, 129];
+    const dark    = [15, 23, 42];
+    const muted   = [100, 116, 139];
+    const light   = [241, 245, 249];
+
+    const durMin  = Math.round((session.totalDuration || 0) / 60);
+    const exs     = session.exercises || [];
+    const setLog  = session.setLog || [];
+    const pse     = session.postBiofeedback?.pse || '-';
+    const date    = new Date(session.date).toLocaleDateString('pt-BR');
+
+    // Header
+    doc.setFillColor(...primary);
+    doc.rect(0, 0, 210, 28, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(18); doc.setFont('helvetica', 'bold');
+    doc.text('Personal PRO', 14, 12);
+    doc.setFontSize(10); doc.setFont('helvetica', 'normal');
+    doc.text('Relatório de Sessão', 14, 20);
+    doc.text(date, 196, 12, { align: 'right' });
+
+    // Aluno + treino
+    doc.setTextColor(...dark);
+    doc.setFontSize(14); doc.setFont('helvetica', 'bold');
+    doc.text(student?.name || 'Aluno', 14, 38);
+    doc.setFontSize(10); doc.setFont('helvetica', 'normal');
+    doc.setTextColor(...muted);
+    doc.text(session.workoutName || 'Treino', 14, 44);
+
+    // Stats
+    const stats = [
+      { label: 'Duração',  value: `${durMin} min` },
+      { label: 'Volume',   value: `${session.totalVolume || 0} kg` },
+      { label: 'Séries',   value: String(session.totalSets || 0) },
+      { label: 'Densidade',value: (session.density || 0).toFixed(2) },
+      { label: 'PSE',      value: String(pse) },
+    ];
+    const boxW = 36; const boxH = 18; let bx = 14;
+    stats.forEach(s => {
+      doc.setFillColor(...light);
+      doc.roundedRect(bx, 50, boxW, boxH, 2, 2, 'F');
+      doc.setTextColor(...muted); doc.setFontSize(7);
+      doc.text(s.label.toUpperCase(), bx + boxW / 2, 56, { align: 'center' });
+      doc.setTextColor(...primary); doc.setFontSize(12); doc.setFont('helvetica', 'bold');
+      doc.text(s.value, bx + boxW / 2, 63, { align: 'center' });
+      doc.setFont('helvetica', 'normal');
+      bx += boxW + 3;
+    });
+
+    // Tabela de exercícios
+    let y = 78;
+    doc.setTextColor(...dark); doc.setFontSize(11); doc.setFont('helvetica', 'bold');
+    doc.text('Exercícios Realizados', 14, y); y += 6;
+
+    // Header da tabela
+    doc.setFillColor(...primary);
+    doc.rect(14, y, 182, 7, 'F');
+    doc.setTextColor(255, 255, 255); doc.setFontSize(8);
+    ['Exercício', 'Séries', 'Reps', 'Carga máx', 'Volume'].forEach((h, i) => {
+      const xs = [14, 90, 110, 130, 158];
+      doc.text(h, xs[i] + 2, y + 5);
+    });
+    y += 7;
+
+    exs.forEach((ex, i) => {
+      const sets = setLog.filter(l => l.exIdx === i);
+      if (sets.length === 0) return;
+      const maxLoad  = Math.max(...sets.map(s => s.load || 0));
+      const totalReps = sets.reduce((t, s) => t + (s.reps || 0), 0);
+      const vol = sets.reduce((t, s) => t + ((s.reps || 0) * (s.load || 0)), 0);
+
+      doc.setFillColor(i % 2 === 0 ? 248 : 255, i % 2 === 0 ? 250 : 255, i % 2 === 0 ? 252 : 255);
+      doc.rect(14, y, 182, 7, 'F');
+      doc.setTextColor(...dark); doc.setFontSize(8); doc.setFont('helvetica', 'normal');
+      doc.text(ex.name || '-', 16, y + 5);
+      doc.text(String(sets.length), 92, y + 5);
+      doc.text(String(totalReps), 112, y + 5);
+      doc.text(`${maxLoad} kg`, 132, y + 5);
+      doc.text(`${vol} kg`, 160, y + 5);
+      y += 7;
+      if (y > 270) { doc.addPage(); y = 20; }
+    });
+
+    // PSE + notas
+    y += 6;
+    if (session.postBiofeedback?.notes) {
+      doc.setTextColor(...muted); doc.setFontSize(9);
+      doc.text('Observações: ' + session.postBiofeedback.notes, 14, y);
+      y += 6;
+    }
+
+    // Footer
+    doc.setFillColor(...dark);
+    doc.rect(0, 287, 210, 10, 'F');
+    doc.setTextColor(255, 255, 255); doc.setFontSize(7);
+    doc.text('Personal PRO — Sistema Profissional de Personal Trainer', 105, 293, { align: 'center' });
+
+    doc.save(`sessao_${student?.name?.replace(/\s/g,'_') || 'aluno'}_${date.replace(/\//g,'-')}.pdf`);
+    notify.success('PDF gerado!');
+  } catch (err) {
+    console.error('PDF error:', err);
+    notify.error('Erro ao gerar PDF: ' + err.message);
+  }
+}
   const s = state.session;
   if (!s) { notify.error('Sessão não encontrada'); return; }
 
@@ -661,6 +770,9 @@ function showSessionSummary(summaryText, session, student, navigateFn) {
       { label: 'Copiar Resumo', class: 'btn-secondary', id: 'copySummary', onClick: () => {
         navigator.clipboard?.writeText(summaryText);
         notify.success('Resumo copiado!');
+      }},
+      { label: 'Exportar PDF', class: 'btn-secondary', id: 'pdfSummary', onClick: () => {
+        generateSessionPDF(session, student);
       }},
       { label: 'Fechar', class: 'btn-primary', id: 'closeSummary', onClick: () => {
         closeModal();
