@@ -633,6 +633,8 @@ function generateSessionPDF(session, student) {
     notify.error('Erro ao gerar PDF: ' + err.message);
   }
 }
+
+async function finishSession(dur, vol, dens, post, navigateFn) {
   const s = state.session;
   if (!s) { notify.error('Sessão não encontrada'); return; }
 
