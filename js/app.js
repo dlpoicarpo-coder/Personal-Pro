@@ -202,3 +202,79 @@ if (document.readyState === 'loading') {
 } else {
   initApp();
 }
+
+// ── PWA INSTALL PROMPT ─────────────────────────────────────
+let _pwaPrompt = null;
+
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  _pwaPrompt = e;
+
+  // Não mostrar se já foi dispensado antes
+  if (localStorage.getItem('pp_pwa_dismissed')) return;
+
+  // Aguardar 8 segundos para mostrar (não perturbar o carregamento)
+  setTimeout(() => {
+    if (!_pwaPrompt) return;
+    showPWABanner();
+  }, 8000);
+});
+
+function showPWABanner() {
+  if (document.getElementById('pwaBanner')) return;
+  const banner = document.createElement('div');
+  banner.id = 'pwaBanner';
+  banner.innerHTML = `
+    <div style="
+      position:fixed;bottom:24px;right:24px;
+      background:#1e293b;
+      border:1px solid rgba(16,185,129,0.3);
+      border-radius:12px;
+      padding:16px 20px;
+      max-width:320px;
+      box-shadow:0 8px 32px rgba(0,0,0,0.4);
+      z-index:99999;
+      animation:slideUp 0.3s ease;
+      color:#f1f5f9;
+    ">
+      <style>@keyframes slideUp{from{transform:translateY(20px);opacity:0}to{transform:translateY(0);opacity:1}}</style>
+      <div style="display:flex;align-items:flex-start;gap:12px">
+        <div style="width:40px;height:40px;background:#10b981;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+          <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 100 100" fill="white"><rect width="100" height="100" rx="20" fill="none"/><text x="50%" y="60%" dominant-baseline="middle" text-anchor="middle" font-family="Arial" font-weight="900" font-size="55">P</text></svg>
+        </div>
+        <div style="flex:1">
+          <div style="font-weight:700;font-size:0.92rem;margin-bottom:3px">Instalar Personal PRO</div>
+          <div style="font-size:0.78rem;color:#94a3b8;line-height:1.4">Acesse mais rápido como app no seu celular ou computador, sem precisar de navegador.</div>
+        </div>
+        <button id="pwaDismiss" style="background:none;border:none;color:#64748b;cursor:pointer;font-size:1.1rem;padding:0 0 0 4px;line-height:1" title="Dispensar">✕</button>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:14px">
+        <button id="pwaInstall" style="flex:1;padding:9px;background:#10b981;color:white;border:none;border-radius:7px;font-weight:600;font-size:0.85rem;cursor:pointer">Instalar App</button>
+        <button id="pwaDismiss2" style="padding:9px 14px;background:rgba(255,255,255,0.08);color:#94a3b8;border:none;border-radius:7px;font-size:0.85rem;cursor:pointer">Agora não</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(banner);
+
+  document.getElementById('pwaInstall')?.addEventListener('click', async () => {
+    if (!_pwaPrompt) return;
+    _pwaPrompt.prompt();
+    const { outcome } = await _pwaPrompt.userChoice;
+    _pwaPrompt = null;
+    banner.remove();
+    if (outcome === 'accepted') localStorage.setItem('pp_pwa_dismissed', '1');
+  });
+
+  const dismiss = () => {
+    localStorage.setItem('pp_pwa_dismissed', '1');
+    banner.remove();
+  };
+  document.getElementById('pwaDismiss')?.addEventListener('click', dismiss);
+  document.getElementById('pwaDismiss2')?.addEventListener('click', dismiss);
+}
+
+// Mostrar botão de instalação nas configurações se disponível
+window.addEventListener('appinstalled', () => {
+  _pwaPrompt = null;
+  localStorage.setItem('pp_pwa_dismissed', '1');
+});
