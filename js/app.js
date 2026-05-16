@@ -209,60 +209,103 @@ let _pwaPrompt = null;
 window.addEventListener('beforeinstallprompt', (e) => {
   e.preventDefault();
   _pwaPrompt = e;
-
-  // Não mostrar se já foi dispensado antes
   if (localStorage.getItem('pp_pwa_dismissed')) return;
+  setTimeout(() => { if (_pwaPrompt) showPWABanner(); }, 5000);
+});
 
-  // Aguardar 8 segundos para mostrar (não perturbar o carregamento)
-  setTimeout(() => {
-    if (!_pwaPrompt) return;
-    showPWABanner();
-  }, 8000);
+window.addEventListener('appinstalled', () => {
+  _pwaPrompt = null;
+  localStorage.setItem('pp_pwa_dismissed', '1');
+  document.getElementById('pwaBanner')?.remove();
 });
 
 function showPWABanner() {
   if (document.getElementById('pwaBanner')) return;
+
+  const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  const isInStandalone = window.matchMedia('(display-mode: standalone)').matches;
+  if (isInStandalone) return; // já instalado
+
+  const isMobile = window.innerWidth <= 768;
+
   const banner = document.createElement('div');
   banner.id = 'pwaBanner';
+
+  const posStyle = isMobile
+    ? 'left:12px;right:12px;bottom:76px;' // acima do bottom nav
+    : 'right:24px;bottom:24px;max-width:340px;';
+
   banner.innerHTML = `
-    <div style="
-      position:fixed;bottom:24px;right:24px;
+    <div id="pwaBannerInner" style="
+      position:fixed;${posStyle}
       background:#1e293b;
-      border:1px solid rgba(16,185,129,0.3);
-      border-radius:12px;
-      padding:16px 20px;
-      max-width:320px;
-      box-shadow:0 8px 32px rgba(0,0,0,0.4);
+      border:1px solid rgba(16,185,129,0.35);
+      border-radius:14px;
+      padding:16px 18px;
+      box-shadow:0 12px 40px rgba(0,0,0,0.5);
       z-index:99999;
-      animation:slideUp 0.3s ease;
       color:#f1f5f9;
+      animation:pwaSlideUp 0.35s cubic-bezier(0.34,1.56,0.64,1) both;
     ">
-      <style>@keyframes slideUp{from{transform:translateY(20px);opacity:0}to{transform:translateY(0);opacity:1}}</style>
+      <style>
+        @keyframes pwaSlideUp {
+          from { transform:translateY(30px); opacity:0 }
+          to   { transform:translateY(0);    opacity:1 }
+        }
+      </style>
+
       <div style="display:flex;align-items:flex-start;gap:12px">
-        <div style="width:40px;height:40px;background:#10b981;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0">
-          <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 100 100" fill="white"><rect width="100" height="100" rx="20" fill="none"/><text x="50%" y="60%" dominant-baseline="middle" text-anchor="middle" font-family="Arial" font-weight="900" font-size="55">P</text></svg>
+        <div style="width:42px;height:42px;background:linear-gradient(135deg,#10b981,#06b6d4);border-radius:11px;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 4px 12px rgba(16,185,129,0.3)">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
         </div>
-        <div style="flex:1">
-          <div style="font-weight:700;font-size:0.92rem;margin-bottom:3px">Instalar Personal PRO</div>
-          <div style="font-size:0.78rem;color:#94a3b8;line-height:1.4">Acesse mais rápido como app no seu celular ou computador, sem precisar de navegador.</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:700;font-size:0.93rem;margin-bottom:3px">Instalar Personal PRO</div>
+          <div style="font-size:0.76rem;color:#94a3b8;line-height:1.45">
+            ${isIOS
+              ? 'Toque em <strong style="color:#f1f5f9">Compartilhar</strong> → <strong style="color:#f1f5f9">Adicionar à Tela Inicial</strong> para instalar.'
+              : 'Acesse como app nativo — mais rápido, sem abrir o navegador.'}
+          </div>
         </div>
-        <button id="pwaDismiss" style="background:none;border:none;color:#64748b;cursor:pointer;font-size:1.1rem;padding:0 0 0 4px;line-height:1" title="Dispensar">✕</button>
+        <button id="pwaDismiss" style="background:none;border:none;color:#64748b;cursor:pointer;font-size:1rem;padding:2px;line-height:1;flex-shrink:0" title="Fechar">✕</button>
       </div>
+
+      ${!isIOS ? `
       <div style="display:flex;gap:8px;margin-top:14px">
-        <button id="pwaInstall" style="flex:1;padding:9px;background:#10b981;color:white;border:none;border-radius:7px;font-weight:600;font-size:0.85rem;cursor:pointer">Instalar App</button>
-        <button id="pwaDismiss2" style="padding:9px 14px;background:rgba(255,255,255,0.08);color:#94a3b8;border:none;border-radius:7px;font-size:0.85rem;cursor:pointer">Agora não</button>
-      </div>
+        <button id="pwaInstall" style="
+          flex:1;padding:10px;
+          background:linear-gradient(135deg,#10b981,#06b6d4);
+          color:white;border:none;border-radius:8px;
+          font-weight:700;font-size:0.85rem;cursor:pointer;
+          box-shadow:0 4px 12px rgba(16,185,129,0.3)">
+          ⬇ Instalar App
+        </button>
+        <button id="pwaDismiss2" style="
+          padding:10px 14px;
+          background:rgba(255,255,255,0.07);
+          color:#94a3b8;border:1px solid rgba(255,255,255,0.08);
+          border-radius:8px;font-size:0.82rem;cursor:pointer">
+          Depois
+        </button>
+      </div>` : `
+      <div style="margin-top:12px;padding:8px 10px;background:rgba(16,185,129,0.08);border-radius:8px;font-size:0.74rem;color:#94a3b8;line-height:1.5">
+        Safari → <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-1px"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg> Compartilhar → Adicionar à Tela Inicial
+      </div>`}
     </div>
   `;
+
   document.body.appendChild(banner);
 
+  // Instalar (Android/Chrome)
   document.getElementById('pwaInstall')?.addEventListener('click', async () => {
     if (!_pwaPrompt) return;
     _pwaPrompt.prompt();
     const { outcome } = await _pwaPrompt.userChoice;
     _pwaPrompt = null;
     banner.remove();
-    if (outcome === 'accepted') localStorage.setItem('pp_pwa_dismissed', '1');
+    if (outcome === 'accepted') {
+      localStorage.setItem('pp_pwa_dismissed', '1');
+      notify('App instalado com sucesso!', 'success');
+    }
   });
 
   const dismiss = () => {
@@ -271,10 +314,26 @@ function showPWABanner() {
   };
   document.getElementById('pwaDismiss')?.addEventListener('click', dismiss);
   document.getElementById('pwaDismiss2')?.addEventListener('click', dismiss);
+
+  // Auto-fechar depois de 20s
+  setTimeout(() => { banner.remove(); }, 20000);
 }
 
-// Mostrar botão de instalação nas configurações se disponível
-window.addEventListener('appinstalled', () => {
-  _pwaPrompt = null;
-  localStorage.setItem('pp_pwa_dismissed', '1');
+// Fallback: mostrar popup iOS mesmo sem beforeinstallprompt
+window.addEventListener('load', () => {
+  const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  const isInStandalone = window.matchMedia('(display-mode: standalone)').matches;
+  const dismissed = localStorage.getItem('pp_pwa_dismissed');
+  if (isIOS && !isInStandalone && !dismissed) {
+    setTimeout(() => showPWABanner(), 6000);
+  }
 });
+
+// Helper toast simples para notificação de instalação
+function notify(msg, type = 'info') {
+  const el = document.createElement('div');
+  el.style.cssText = `position:fixed;top:20px;right:20px;padding:12px 20px;background:${type==='success'?'#10b981':'#3b82f6'};color:white;border-radius:8px;font-size:0.85rem;font-weight:600;z-index:99999;box-shadow:0 4px 16px rgba(0,0,0,0.3);animation:pwaSlideUp 0.3s ease`;
+  el.textContent = msg;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 3000);
+}
