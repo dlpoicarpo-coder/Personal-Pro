@@ -175,7 +175,7 @@ export async function renderWeeklySummary() {
         <div style="display:flex;flex-wrap:wrap;gap:8px">
           ${withoutActivity.map(({ s }) => `
             <div class="flex items-center gap-sm" style="padding:8px 12px;background:var(--bg-page);border-radius:8px">
-              <div class="avatar avatar-sm">${s.name[0]}</div>
+              <div class="avatar avatar-sm">${s.name.split(' ').filter(Boolean).map(n=>n[0]).slice(0,2).join('').toUpperCase()}</div>
               <span style="font-size:0.85rem;font-weight:500">${s.name}</span>
               ${s.phone ? `<button class="btn btn-ghost btn-sm wa-nudge" data-name="${s.name.split(' ')[0]}" data-phone="${s.phone}" style="padding:3px 6px;color:#25d366">${ICON_WA}</button>` : ''}
             </div>`).join('')}
@@ -273,7 +273,7 @@ function renderStudentCard(s, d, weekLabel) {
               <td>${Calc.formatDate(x.date)}</td>
               <td>${x.workoutName || '-'}</td>
               <td>${Math.round((x.totalDuration||0)/60)}min</td>
-              <td style="color:var(--accent);font-weight:600">${x.totalVolume||0}kg</td>
+              <td style="color:var(--accent);font-weight:600">${Math.round(x.totalVolume || 0)} kg</td>
               <td>${x.totalSets||'-'}</td>
               <td style="color:${(x.postBiofeedback?.pse||0)>8?'var(--danger)':(x.postBiofeedback?.pse||0)>6?'var(--warning)':'var(--success)'}">
                 ${x.postBiofeedback?.pse||'-'}
@@ -323,7 +323,7 @@ export function initWeeklySummary(navigateFn) {
           <div style="display:flex;flex-wrap:wrap;gap:8px">
             ${withoutActivity.map(({ s }) => `
               <div class="flex items-center gap-sm" style="padding:8px 12px;background:var(--bg-page);border-radius:8px">
-                <div class="avatar avatar-sm">${s.name[0]}</div>
+                <div class="avatar avatar-sm">${s.name.split(' ').filter(Boolean).map(n=>n[0]).slice(0,2).join('').toUpperCase()}</div>
                 <span style="font-size:0.85rem">${s.name}</span>
                 ${s.phone ? `<button class="btn btn-ghost btn-sm wa-nudge" data-name="${s.name.split(' ')[0]}" data-phone="${s.phone}" style="padding:3px 6px;color:#25d366">${ICON_WA}</button>` : ''}
               </div>`).join('')}
