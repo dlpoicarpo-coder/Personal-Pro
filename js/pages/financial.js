@@ -229,7 +229,7 @@ export async function renderFinancial() {
       <div class="card-header"><span class="card-title">Sessões Realizadas — ${now.toLocaleDateString('pt-BR',{month:'long',year:'numeric'})}</span></div>
       <div class="table-container">
         <table class="data-table">
-          <thead><tr><th>Aluno</th><th>Realizadas</th><th>Esperadas</th><th>Progresso</th><th>Valor por sessão</th><th>Valor gerado</th></tr></thead>
+          <thead><tr><th>Aluno</th><th>Realizadas</th><th>Esperadas</th><th>Progresso</th><th title="Mensalidade ÷ sessões esperadas">Custo/sessão</th><th title="Custo por sessão × sessões realizadas">Valor proporcional</th></tr></thead>
           <tbody>${active.map(s => {
             const ms = monthSessions.filter(x=>x.studentId===s.id).length;
             const exp = s.expectedSessions || 12;
@@ -260,6 +260,9 @@ export async function renderFinancial() {
           }).join('')}</tbody>
         </table>
       </div>
+      <p class="text-xs text-muted mt-sm" style="padding:0 4px">
+        * <strong>Custo/sessão</strong> = mensalidade ÷ sessões esperadas no mês · <strong>Valor proporcional</strong> = custo/sessão × sessões realizadas
+      </p>
     </div>
   `;
 }
