@@ -112,7 +112,7 @@ export async function renderDashboard() {
           if ((b.stress || 0) >= 8) issues.push(`Estresse alto: ${b.stress}/10`);
           if ((b.pain || 0) >= 6) issues.push(`Dor: ${b.pain}/10`);
           return `<div class="flex items-center gap-md" style="padding:8px 0;border-bottom:1px solid var(--border-color)">
-            <div class="avatar avatar-sm" style="background:rgba(245,158,11,0.2);color:var(--warning)">${st ? st.name[0] : '?'}</div>
+            <div class="avatar avatar-sm" style="background:rgba(245,158,11,0.2);color:var(--warning)">${st ? st.name.split(' ').filter(Boolean).map(n=>n[0]).slice(0,2).join('').toUpperCase() : '?'}</div>
             <div style="flex:1">
               <div style="font-weight:600;font-size:0.88rem">${st?.name || 'Aluno'}</div>
               <div style="font-size:0.75rem;color:var(--warning)">${issues.join(' · ')}</div>
@@ -133,7 +133,7 @@ export async function renderDashboard() {
         ${todaySchedules.length ? todaySchedules.slice(0, 5).map(s => {
           const st = students.find(x => x.id === s.studentId);
           return `<div class="flex items-center gap-md" style="padding:8px 0;border-bottom:1px solid var(--border-color)">
-            <div class="avatar avatar-sm">${st ? st.name[0] : '?'}</div>
+            <div class="avatar avatar-sm">${st ? st.name.split(' ').filter(Boolean).map(n=>n[0]).slice(0,2).join('').toUpperCase() : '?'}</div>
             <div style="flex:1">
               <div style="font-weight:600;font-size:0.88rem">${st?.name || 'Aluno'}</div>
               <div style="font-size:0.75rem;color:var(--text-muted)">${s.time || ''} · ${s.workoutName || 'Treino'}</div>
@@ -175,7 +175,7 @@ export async function renderDashboard() {
           const st = students.find(s => s.id === b.studentId);
           const sleepColor = (b.sleep || 0) < 5 ? 'var(--danger)' : (b.sleep || 0) < 7 ? 'var(--warning)' : 'var(--success)';
           return `<div class="flex items-center gap-md" style="padding:8px 0;border-bottom:1px solid var(--border-color)">
-            <div class="avatar avatar-sm">${st ? st.name[0] : '?'}</div>
+            <div class="avatar avatar-sm">${st ? st.name.split(' ').filter(Boolean).map(n=>n[0]).slice(0,2).join('').toUpperCase() : '?'}</div>
             <div style="flex:1">
               <div style="font-weight:500;font-size:0.85rem">${st?.name || 'Aluno'}</div>
               <div class="text-muted text-xs">${Calc.formatDate(b.date)}</div>
@@ -198,7 +198,7 @@ export async function renderDashboard() {
         ${needsAssessment.length ? needsAssessment.slice(0, 5).map(s => {
           const lastAss = assessments.filter(a => a.studentId === s.id).sort((a, b) => new Date(b.date) - new Date(a.date))[0];
           return `<div class="flex items-center gap-md" style="padding:8px 0;border-bottom:1px solid var(--border-color)">
-            <div class="avatar avatar-sm">${s.name[0]}</div>
+            <div class="avatar avatar-sm">${s.name.split(' ').filter(Boolean).map(n=>n[0]).slice(0,2).join('').toUpperCase()}</div>
             <div style="flex:1">
               <div style="font-weight:600;font-size:0.88rem">${s.name}</div>
               <div class="text-xs text-muted">${lastAss ? 'Última: ' + Calc.formatDate(lastAss.date) : 'Nunca avaliado'}</div>
