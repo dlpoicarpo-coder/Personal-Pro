@@ -100,9 +100,11 @@ export async function renderAssessments() {
     <div class="tabs" id="assessmentTypeTabs">
       <button class="tab active" data-type="composicao">Composição Corporal</button>
       <button class="tab" data-type="forca">Força &amp; 1RM</button>
+      <button class="tab" data-type="protocolo1rm">Protocolo 1RM Submax</button>
       <button class="tab" data-type="conconi">Protocolo Conconi</button>
       <button class="tab" data-type="zonas">Zonas de Treino</button>
       <button class="tab" data-type="evolucao">Evolução</button>
+      <button class="tab" data-type="ficha">Ficha Completa</button>
     </div>
 
     <!-- COMPOSIÇÃO -->
@@ -174,8 +176,122 @@ export async function renderAssessments() {
       </div>
     </div>
 
-    <!-- EVOLUÇÃO -->
-    <div id="panel-evolucao" class="assessment-panel" style="display:none">
+    <!-- PROTOCOLO 1RM SUBMAX -->
+    <div id="panel-protocolo1rm" class="assessment-panel" style="display:none">
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">Protocolo 1RM Submax</span>
+            <span class="badge badge-success">Seguro e Preciso</span>
+          </div>
+          <p class="text-xs text-muted mb-md" style="line-height:1.6">
+            Estimativa do 1RM sem chegar ao máximo absoluto. Selecione um aluno e exercício, execute as séries e registre a carga e reps de cada uma. O sistema calcula automaticamente o 1RM estimado.
+          </p>
+
+          <div class="form-group">
+            <label class="form-label">Aluno</label>
+            <select class="form-select" id="rm1protStudent">
+              <option value="">Selecione</option>
+              ${activeStudents.map(s=>`<option value="${s.id}">${s.name}</option>`).join('')}
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Exercício</label>
+            <input class="form-input" id="rm1protExercise" list="rm1protExList" placeholder="Ex: Supino Reto com Barra" />
+            <datalist id="rm1protExList">
+              ${RM_EXERCISES.map(e=>`<option value="${e}">`).join('')}
+            </datalist>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Fórmula de estimativa</label>
+            <select class="form-select" id="rm1protFormula">
+              <option value="epley">Epley (padrão)</option>
+              <option value="brzycki">Brzycki</option>
+              <option value="lander">Lander</option>
+              <option value="lombardi">Lombardi</option>
+              <option value="mayhew">Mayhew</option>
+            </select>
+          </div>
+
+          <div style="border-top:1px solid var(--border-color);padding-top:14px;margin-top:4px">
+            <div class="text-xs text-muted mb-sm" style="font-weight:600;text-transform:uppercase;letter-spacing:0.06em">Séries — Registre carga e reps realizadas</div>
+            ${Calc.protocolo1RM.steps.map((s, i) => `
+            <div style="display:grid;grid-template-columns:32px 1fr 80px 80px auto;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid var(--border-color)">
+              <div style="width:28px;height:28px;border-radius:50%;background:var(--primary);color:white;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:0.8rem;flex-shrink:0">${s.set}</div>
+              <div>
+                <div style="font-size:0.78rem;font-weight:600">~${s.pct}% · ${s.reps} reps</div>
+                <div style="font-size:0.68rem;color:var(--text-muted)">${s.desc}</div>
+              </div>
+              <input class="form-input rm1-carga" data-set="${i}" type="number" step="0.5" placeholder="kg" style="text-align:center;font-size:0.82rem;padding:4px 6px" />
+              <input class="form-input rm1-reps" data-set="${i}" type="number" min="1" max="20" placeholder="reps" style="text-align:center;font-size:0.82rem;padding:4px 6px" />
+              <span class="rm1-result" data-set="${i}" style="font-size:0.78rem;color:var(--primary);font-weight:700;min-width:50px">—</span>
+            </div>`).join('')}
+          </div>
+
+          <div style="margin-top:16px;padding:14px;background:rgba(16,185,129,0.08);border-radius:10px;border:1px solid rgba(16,185,129,0.2)">
+            <div class="text-xs text-muted mb-xs" style="font-weight:600;text-transform:uppercase;letter-spacing:0.06em">Melhor estimativa de 1RM</div>
+            <div id="rm1protResult" style="font-size:2.2rem;font-weight:800;color:var(--primary)">—</div>
+            <div id="rm1protSource" class="text-xs text-muted mt-xs">Preencha as séries acima</div>
+          </div>
+
+          <button class="btn btn-primary mt-md" id="saveRM1Prot" style="width:100%">Salvar 1RM Estimado</button>
+        </div>
+
+        <div class="card">
+          <div class="card-header"><span class="card-title">Instruções do Protocolo</span></div>
+
+          <div style="margin-bottom:16px">
+            <div class="text-xs text-muted mb-sm" style="font-weight:600;text-transform:uppercase;letter-spacing:0.06em">Como executar</div>
+            <ol style="padding-left:18px;line-height:2;font-size:0.85rem">
+              ${Calc.protocolo1RM.instructions.map(i=>`<li>${i}</li>`).join('')}
+            </ol>
+          </div>
+
+          <div style="padding:12px;background:rgba(245,158,11,0.08);border-radius:8px;border-left:3px solid var(--warning);margin-bottom:14px">
+            <div style="font-size:0.75rem;font-weight:700;color:var(--warning);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.06em">Segurança</div>
+            ${Calc.protocolo1RM.safetyNotes.map(n=>`<div style="font-size:0.8rem;color:var(--text-secondary);margin-bottom:3px">• ${n}</div>`).join('')}
+          </div>
+
+          <div style="border-top:1px solid var(--border-color);padding-top:14px">
+            <div class="text-xs text-muted mb-sm" style="font-weight:600;text-transform:uppercase;letter-spacing:0.06em">Comparação das fórmulas</div>
+            <table class="data-table" style="font-size:0.8rem">
+              <thead><tr><th>Fórmula</th><th>Melhor para</th><th>Reps ideais</th></tr></thead>
+              <tbody>
+                <tr><td><strong>Epley</strong></td><td>Uso geral — mais usada</td><td>1-10 reps</td></tr>
+                <tr><td><strong>Brzycki</strong></td><td>Baixo número de reps</td><td>1-6 reps</td></tr>
+                <tr><td><strong>Lander</strong></td><td>Alta precisão geral</td><td>1-10 reps</td></tr>
+                <tr><td><strong>Lombardi</strong></td><td>Altas repetições</td><td>6-12 reps</td></tr>
+                <tr><td><strong>Mayhew</strong></td><td>Bench press específico</td><td>4-10 reps</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- FICHA COMPLETA POR ALUNO -->
+    <div id="panel-ficha" class="assessment-panel" style="display:none">
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Ficha Completa de Avaliação</span>
+          <div class="flex gap-sm">
+            <select class="form-select" id="fichaStudentSel" style="width:auto">
+              <option value="">Selecione um aluno</option>
+              ${activeStudents.map(s=>`<option value="${s.id}">${s.name}</option>`).join('')}
+            </select>
+            <button class="btn btn-secondary btn-sm" id="fichaExportBtn" style="display:none">Gerar PDF</button>
+          </div>
+        </div>
+        <div id="fichaContent">
+          <div class="empty-state" style="padding:40px">
+            <div class="empty-icon">—</div>
+            <h3>Selecione um aluno</h3>
+            <p>A ficha completa de avaliação será gerada com todos os dados registrados</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
       <div class="card">
         <div class="card-header">
           <span class="card-title">Evolução do Aluno</span>
@@ -632,6 +748,105 @@ export function initAssessments(navigateFn) {
     });
   });
 
+  // ── PROTOCOLO 1RM SUBMAX ─────────────────────────────────
+  // Preview em tempo real ao preencher carga/reps
+  document.querySelectorAll('.rm1-carga, .rm1-reps').forEach(inp => {
+    inp.addEventListener('input', () => {
+      const i      = inp.dataset.set;
+      const carga  = parseFloat(document.querySelector(`.rm1-carga[data-set="${i}"]`)?.value);
+      const reps   = parseInt(document.querySelector(`.rm1-reps[data-set="${i}"]`)?.value);
+      const form   = document.getElementById('rm1protFormula')?.value || 'epley';
+      const resEl  = document.querySelector(`.rm1-result[data-set="${i}"]`);
+      if (carga && reps && resEl) {
+        const est = Calc.rm1Estimado(carga, reps, form);
+        resEl.textContent = est ? est + 'kg' : '—';
+      }
+      // Atualizar melhor estimativa
+      updateRM1ProtResult();
+    });
+  });
+
+  document.getElementById('rm1protFormula')?.addEventListener('change', () => {
+    document.querySelectorAll('.rm1-carga').forEach(inp => inp.dispatchEvent(new Event('input')));
+  });
+
+  function updateRM1ProtResult() {
+    const form = document.getElementById('rm1protFormula')?.value || 'epley';
+    const series = [];
+    for (let i = 0; i < 5; i++) {
+      const carga = parseFloat(document.querySelector(`.rm1-carga[data-set="${i}"]`)?.value);
+      const reps  = parseInt(document.querySelector(`.rm1-reps[data-set="${i}"]`)?.value);
+      if (carga && reps) series.push({ carga, reps, formula: form });
+    }
+    const best = Calc.melhorEstimativa1RM(series);
+    const resEl = document.getElementById('rm1protResult');
+    const srcEl = document.getElementById('rm1protSource');
+    if (best && resEl) {
+      resEl.textContent = best.rm1 + ' kg';
+      if (srcEl) srcEl.textContent = `Série ${parseInt(series.findIndex(s=>s.carga===best.carga && s.reps===best.reps))+1} · ${best.carga}kg × ${best.reps} reps · fórmula ${form}`;
+    } else if (resEl) {
+      resEl.textContent = '—';
+    }
+  }
+
+  document.getElementById('saveRM1Prot')?.addEventListener('click', async () => {
+    const sid  = document.getElementById('rm1protStudent')?.value;
+    const ex   = document.getElementById('rm1protExercise')?.value;
+    const form = document.getElementById('rm1protFormula')?.value || 'epley';
+    if (!sid)  { notify.error('Selecione um aluno'); return; }
+    if (!ex)   { notify.error('Informe o exercício'); return; }
+
+    const series = [];
+    for (let i = 0; i < 5; i++) {
+      const carga = parseFloat(document.querySelector(`.rm1-carga[data-set="${i}"]`)?.value);
+      const reps  = parseInt(document.querySelector(`.rm1-reps[data-set="${i}"]`)?.value);
+      if (carga && reps) series.push({ set: i+1, carga, reps });
+    }
+    if (!series.length) { notify.error('Registre pelo menos uma série'); return; }
+
+    const best = Calc.melhorEstimativa1RM(series.map(s => ({ ...s, formula: form })));
+    if (!best?.rm1) { notify.error('Não foi possível calcular o 1RM'); return; }
+
+    // Verificar se é PR
+    const all = await db.getAll('assessments');
+    const prev = all.filter(a => a.studentId === sid && a.exercise === ex && a.rm1).sort((a,b)=>new Date(b.date)-new Date(a.date));
+    const isPR = !prev.length || best.rm1 > prev[0].rm1;
+
+    await db.add('assessments', {
+      studentId: sid, type: 'forca', exercise: ex,
+      carga: best.carga, reps: best.reps, rm1: best.rm1,
+      formula: form, series, protocolo: 'submax',
+      isPR, date: new Date().toISOString().slice(0, 10),
+      notes: `Protocolo submax · ${series.length} séries · fórmula ${form}`,
+    });
+
+    notify.success(`1RM ${isPR ? '🏆 PR! ' : ''}Estimado: ${best.rm1}kg salvo!`);
+    navigateFn('/avaliacoes');
+  });
+
+  // ── FICHA COMPLETA POR ALUNO ──────────────────────────────
+  document.getElementById('fichaStudentSel')?.addEventListener('change', async (e) => {
+    const sid = e.target.value;
+    const exportBtn = document.getElementById('fichaExportBtn');
+    if (!sid) {
+      document.getElementById('fichaContent').innerHTML = `
+        <div class="empty-state" style="padding:40px">
+          <div class="empty-icon">—</div><h3>Selecione um aluno</h3>
+        </div>`;
+      if (exportBtn) exportBtn.style.display = 'none';
+      return;
+    }
+    if (exportBtn) exportBtn.style.display = '';
+    await renderFichaCompleta(sid);
+  });
+
+  document.getElementById('fichaExportBtn')?.addEventListener('click', async () => {
+    const sid = document.getElementById('fichaStudentSel')?.value;
+    if (!sid) return;
+    await exportFichaPDF(sid);
+  });
+
+
   // + Nova Avaliação
   document.getElementById('addAssessmentBtn')?.addEventListener('click', async () => {
     const activeTab = document.querySelector('#assessmentTypeTabs .tab.active');
@@ -823,4 +1038,324 @@ export function initAssessments(navigateFn) {
       }, 100);
     }
   });
+}
+
+// ── FICHA COMPLETA ────────────────────────────────────────────
+async function renderFichaCompleta(sid) {
+  const content    = document.getElementById('fichaContent');
+  if (!content) return;
+  content.innerHTML = '<div class="text-muted text-sm" style="padding:20px">Carregando...</div>';
+
+  const student    = await db.get('students', sid);
+  const assessments= (await db.getAll('assessments')).filter(a => a.studentId === sid).sort((a,b)=>new Date(b.date)-new Date(a.date));
+  const biofeedback= (await db.getAll('biofeedback')).filter(b => b.studentId === sid).sort((a,b)=>new Date(b.date)-new Date(a.date));
+  const anamnesis  = (await db.getAll('anamnesis')).filter(a => a.trainer_id || true).find(a => a.fullName === student?.name);
+  const sessions   = (await db.getAll('sessions')).filter(s => s.studentId === sid && s.status === 'completed');
+
+  const comp  = assessments.filter(a => a.type === 'composicao');
+  const forca = assessments.filter(a => a.type === 'forca');
+  const conc  = assessments.filter(a => a.type === 'conconi');
+
+  // PRs por exercício
+  const prs = {};
+  forca.forEach(a => {
+    if (!prs[a.exercise] || a.rm1 > prs[a.exercise].rm1) prs[a.exercise] = a;
+  });
+
+  // Biofeedback médias últimos 10
+  const bf10 = biofeedback.slice(0, 10);
+  const avgBf = (key) => bf10.length ? Math.round(bf10.reduce((t,b)=>t+(b[key]||0),0)/bf10.length*10)/10 : null;
+
+  const age = student?.birthDate ? Calc.calcularIdade(student.birthDate) : student?.age;
+
+  content.innerHTML = `
+    <div id="fichaBody">
+      <!-- Cabeçalho -->
+      <div class="flex items-center gap-lg mb-lg" style="padding-bottom:16px;border-bottom:2px solid var(--border-active)">
+        <div class="avatar avatar-xl" style="width:64px;height:64px;font-size:1.6rem">
+          ${(student?.name||'?').split(' ').filter(Boolean).map(n=>n[0]).slice(0,2).join('').toUpperCase()}
+        </div>
+        <div style="flex:1">
+          <h2 style="margin:0">${student?.name || '—'}</h2>
+          <div class="text-muted text-sm mt-xs">${student?.code||''} · ${age ? age + ' anos' : '—'} · ${student?.goal||'—'}</div>
+          <div class="flex gap-sm mt-xs">
+            ${student?.phone ? `<span class="badge badge-info">${student.phone}</span>` : ''}
+            ${student?.weeklyFrequency ? `<span class="badge badge-success">${student.weeklyFrequency}/sem</span>` : ''}
+            ${student?.status ? `<span class="badge badge-${student.status==='Ativo'?'success':'warning'}">${student.status}</span>` : ''}
+          </div>
+        </div>
+        <div style="text-align:right">
+          <div class="text-xs text-muted">Última avaliação</div>
+          <div style="font-weight:700;color:var(--primary)">${assessments[0] ? Calc.formatDate(assessments[0].date) : '—'}</div>
+          <div class="text-xs text-muted mt-xs">Sessões realizadas</div>
+          <div style="font-weight:700">${sessions.length}</div>
+        </div>
+      </div>
+
+      ${comp.length ? `
+      <!-- Composição Corporal -->
+      <div class="card mb-md">
+        <div class="card-header"><span class="card-title">Composição Corporal</span><span class="text-xs text-muted">${comp.length} avaliação(ões)</span></div>
+        <div class="table-container">
+          <table class="data-table" style="font-size:0.82rem">
+            <thead><tr><th>Data</th><th>Peso</th><th>IMC</th><th>% Gordura</th><th>Massa Magra</th><th>Massa Gorda</th><th>Cintura</th><th>RCQ</th></tr></thead>
+            <tbody>
+              ${comp.map((a,i) => {
+                const imc  = a.peso && a.altura ? Calc.imc(a.peso, a.altura) : null;
+                const imcC = imc ? Calc.imcClassificacao(imc) : null;
+                const prev = comp[i+1];
+                const dpeso= prev && a.peso ? Math.round((a.peso - prev.peso)*10)/10 : null;
+                return `<tr>
+                  <td style="white-space:nowrap">${Calc.formatDate(a.date)}</td>
+                  <td>
+                    <strong>${a.peso||'—'}kg</strong>
+                    ${dpeso!=null ? `<span style="font-size:0.7rem;color:${dpeso<0?'var(--success)':'var(--danger)'};margin-left:4px">${dpeso>0?'+':''}${dpeso}kg</span>` : ''}
+                  </td>
+                  <td>${imc ? `<span class="badge badge-${imcC.color}">${Calc.formatNum(imc)}</span>` : '—'}</td>
+                  <td style="color:${(a.percentualGordura||0)>30?'var(--danger)':'inherit'}">${a.percentualGordura ? Calc.formatNum(a.percentualGordura)+'%' : '—'}</td>
+                  <td style="color:var(--success)">${a.massaMagra ? Calc.formatNum(a.massaMagra)+'kg' : '—'}</td>
+                  <td>${a.massaGorda ? Calc.formatNum(a.massaGorda)+'kg' : '—'}</td>
+                  <td>${a.cintura ? a.cintura+'cm' : '—'}</td>
+                  <td>${a.rcq ? Calc.formatNum(a.rcq,2) : '—'}</td>
+                </tr>`;
+              }).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>` : ''}
+
+      ${Object.keys(prs).length ? `
+      <!-- PRs de Força -->
+      <div class="card mb-md">
+        <div class="card-header"><span class="card-title">Records Pessoais — 1RM Estimado</span><span class="text-xs text-muted">${forca.length} registro(s)</span></div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;margin-bottom:10px">
+          ${Object.entries(prs).map(([ex, a]) => `
+            <div style="padding:10px 12px;background:var(--bg-page);border-radius:8px;border:1px solid ${a.isPR?'rgba(16,185,129,0.3)':'var(--border-color)'}">
+              <div style="font-size:0.72rem;color:var(--text-muted);margin-bottom:3px">${ex}</div>
+              <div style="font-size:1.4rem;font-weight:800;color:var(--primary)">${a.rm1}kg</div>
+              <div style="font-size:0.65rem;color:var(--text-muted)">${Calc.formatDate(a.date)}</div>
+              ${a.isPR ? `<div style="font-size:0.65rem;color:var(--success);font-weight:700">PR</div>` : ''}
+            </div>`).join('')}
+        </div>
+        <div class="table-container">
+          <table class="data-table" style="font-size:0.78rem">
+            <thead><tr><th>Data</th><th>Exercício</th><th>Carga</th><th>Reps</th><th>1RM</th><th>Protocolo</th><th>Fórmula</th></tr></thead>
+            <tbody>
+              ${forca.slice(0,15).map(a=>`<tr>
+                <td>${Calc.formatDate(a.date)}</td>
+                <td><strong>${a.exercise||'—'}</strong></td>
+                <td>${a.carga||'—'}kg</td>
+                <td>${a.reps||'—'}</td>
+                <td style="color:var(--primary);font-weight:700">${a.rm1||'—'}kg ${a.isPR?'<span style="color:var(--success);font-size:0.65rem">PR</span>':''}</td>
+                <td style="font-size:0.72rem">${a.protocolo==='submax'?'Submax':'Direto'}</td>
+                <td style="font-size:0.72rem;color:var(--text-muted)">${a.formula||'Epley'}</td>
+              </tr>`).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>` : ''}
+
+      ${conc.length ? `
+      <!-- Conconi / VO2max -->
+      <div class="card mb-md">
+        <div class="card-header"><span class="card-title">Protocolo Conconi / VO₂max</span></div>
+        <div class="table-container">
+          <table class="data-table" style="font-size:0.82rem">
+            <thead><tr><th>Data</th><th>FC Pico</th><th>VMA</th><th>VO₂max</th><th>Limiar Anaeróbio</th></tr></thead>
+            <tbody>
+              ${conc.map(a=>`<tr>
+                <td>${Calc.formatDate(a.date)}</td>
+                <td>${a.fcPico||'—'} bpm</td>
+                <td>${a.vma||'—'} km/h</td>
+                <td style="color:var(--accent);font-weight:700">${a.vo2max||'—'} ml/kg/min</td>
+                <td>${a.fcLimiar||'—'} bpm ${a.limiar2?`· ${a.limiar2} km/h`:''}</td>
+              </tr>`).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>` : ''}
+
+      ${bf10.length ? `
+      <!-- Biofeedback -->
+      <div class="card mb-md">
+        <div class="card-header"><span class="card-title">Biofeedback Recente</span><span class="text-xs text-muted">últimos ${bf10.length} registros</span></div>
+        <div class="stats-grid" style="grid-template-columns:repeat(5,1fr);margin-bottom:12px">
+          ${[
+            ['Sono',        avgBf('sleep'),  false],
+            ['Disposição',  avgBf('mood'),   false],
+            ['Energia',     avgBf('energy'), false],
+            ['Estresse',    avgBf('stress'), true ],
+            ['PSE Médio',   avgBf('pse'),    true ],
+          ].map(([l,v,inv])=>`<div class="stat-card" style="text-align:center;padding:10px">
+            <div class="stat-label" style="font-size:0.62rem">${l}</div>
+            <div style="font-size:1.3rem;font-weight:800;color:${v==null?'var(--text-muted)':inv?(v>=7?'var(--danger)':v>=5?'var(--warning)':'var(--success)'):(v<=3?'var(--danger)':v<=5?'var(--warning)':'var(--success)')}">${v??'—'}</div>
+          </div>`).join('')}
+        </div>
+      </div>` : ''}
+
+      ${anamnesis ? `
+      <!-- Anamnese -->
+      <div class="card mb-md">
+        <div class="card-header"><span class="card-title">Anamnese</span><span class="text-xs text-muted">${anamnesis.submittedAt ? Calc.formatDate(anamnesis.submittedAt) : ''}</span></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:0.82rem">
+          ${[
+            ['Condições médicas',  anamnesis.conditions],
+            ['Medicações',         anamnesis.medications],
+            ['Lesões',             anamnesis.injuries],
+            ['Atividade atual',    anamnesis.currentActivity],
+            ['Experiência',        anamnesis.experience],
+            ['Qualidade do sono',  anamnesis.sleepQuality],
+            ['Nível de estresse',  anamnesis.stressLevel],
+            ['Alimentação',        anamnesis.nutrition],
+          ].filter(([,v])=>v).map(([l,v])=>`
+            <div style="padding:6px 8px;background:var(--bg-page);border-radius:6px">
+              <div class="text-xs text-muted">${l}</div>
+              <div style="font-weight:500;margin-top:1px">${v}</div>
+            </div>`).join('')}
+        </div>
+      </div>` : ''}
+
+      ${!assessments.length && !bf10.length ? `
+      <div class="empty-state" style="padding:40px">
+        <div class="empty-icon">—</div>
+        <h3>Nenhuma avaliação registrada</h3>
+        <p>Registre avaliações nas abas acima para preencher a ficha</p>
+      </div>` : ''}
+    </div>
+  `;
+}
+
+async function exportFichaPDF(sid) {
+  const student    = await db.get('students', sid);
+  const assessments= (await db.getAll('assessments')).filter(a => a.studentId === sid).sort((a,b)=>new Date(b.date)-new Date(a.date));
+  const biofeedback= (await db.getAll('biofeedback')).filter(b => b.studentId === sid).sort((a,b)=>new Date(b.date)-new Date(a.date));
+  const sessions   = (await db.getAll('sessions')).filter(s => s.studentId === sid && s.status === 'completed');
+  const settings   = await db.get('settings', 'trainer') || {};
+
+  const comp  = assessments.filter(a => a.type === 'composicao');
+  const forca = assessments.filter(a => a.type === 'forca');
+  const conc  = assessments.filter(a => a.type === 'conconi');
+  const prs   = {};
+  forca.forEach(a => { if (!prs[a.exercise] || a.rm1 > prs[a.exercise].rm1) prs[a.exercise] = a; });
+  const bf10  = biofeedback.slice(0, 10);
+  const avgBf = (key) => bf10.length ? Math.round(bf10.reduce((t,b)=>t+(b[key]||0),0)/bf10.length*10)/10 : null;
+  const age   = student?.birthDate ? Calc.calcularIdade(student.birthDate) : student?.age;
+  const ini   = (student?.name||'?').split(' ').filter(Boolean).map(n=>n[0]).slice(0,2).join('').toUpperCase();
+
+  const html = `<!DOCTYPE html><html lang="pt-BR"><head>
+    <meta charset="UTF-8"><title>Ficha — ${student?.name}</title>
+    <style>
+      *{box-sizing:border-box;margin:0;padding:0}
+      body{font-family:'Segoe UI',Arial,sans-serif;color:#222;padding:24px 32px;font-size:12px;line-height:1.5;max-width:900px;margin:0 auto}
+      .header{display:flex;align-items:center;gap:16px;border-bottom:3px solid #10b981;padding-bottom:12px;margin-bottom:16px}
+      .avatar{width:52px;height:52px;border-radius:50%;background:#10b981;color:#fff;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:800;flex-shrink:0}
+      h1{font-size:20px;color:#10b981}
+      h2{font-size:13px;color:#10b981;border-bottom:1px solid #d1fae5;padding-bottom:4px;margin:16px 0 8px;font-weight:700}
+      table{width:100%;border-collapse:collapse;margin-bottom:12px;font-size:11px}
+      th{background:#f3f4f6;padding:6px 8px;text-align:left;font-size:10px;text-transform:uppercase;color:#555;border-bottom:2px solid #e5e7eb}
+      td{padding:6px 8px;border-bottom:1px solid #f0f0f0}
+      tr:nth-child(even) td{background:#fafafa}
+      .badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:600}
+      .badge-success{background:#d1fae5;color:#065f46}
+      .badge-warning{background:#fef3c7;color:#92400e}
+      .badge-danger{background:#fee2e2;color:#991b1b}
+      .badge-info{background:#dbeafe;color:#1e40af}
+      .prs{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px}
+      .pr-card{padding:8px 10px;border:1px solid #e5e7eb;border-radius:6px;background:#fafafa}
+      .pr-card .ex{font-size:10px;color:#666;margin-bottom:2px}
+      .pr-card .val{font-size:18px;font-weight:800;color:#10b981}
+      .pr-card .date{font-size:9px;color:#999}
+      .bf-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:12px}
+      .bf-card{text-align:center;padding:8px;border:1px solid #e5e7eb;border-radius:6px}
+      .bf-card .lbl{font-size:9px;color:#666;text-transform:uppercase}
+      .bf-card .val{font-size:16px;font-weight:800;color:#10b981;margin-top:2px}
+      .footer{text-align:center;font-size:10px;color:#aaa;margin-top:24px;border-top:1px solid #e5e7eb;padding-top:10px}
+      @media print{body{padding:14px 18px}@page{margin:1.5cm}}
+    </style>
+    <script>window.onload=function(){setTimeout(function(){window.print()},500)}<\/script>
+  </head><body>
+    <div class="header">
+      <div class="avatar">${ini}</div>
+      <div>
+        <h1>${student?.name||'—'}</h1>
+        <p>${student?.code||''} · ${age?age+' anos':'—'} · ${student?.goal||'—'} · ${student?.status||''}</p>
+      </div>
+      <div style="margin-left:auto;text-align:right">
+        <p style="font-size:11px;color:#666">Ficha gerada por ${settings.trainerName||'Personal PRO'}</p>
+        <p style="font-size:11px;color:#666">${new Date().toLocaleDateString('pt-BR')}</p>
+        <p style="font-size:11px;color:#666">${sessions.length} sessões realizadas</p>
+      </div>
+    </div>
+
+    ${comp.length ? `
+    <h2>Composição Corporal</h2>
+    <table>
+      <thead><tr><th>Data</th><th>Peso</th><th>IMC</th><th>% Gordura</th><th>Massa Magra</th><th>Massa Gorda</th><th>Cintura</th><th>RCQ</th></tr></thead>
+      <tbody>${comp.map(a=>{
+        const imc=a.peso&&a.altura?Calc.imc(a.peso,a.altura):null;
+        const imcC=imc?Calc.imcClassificacao(imc):null;
+        return `<tr>
+          <td>${Calc.formatDate(a.date)}</td>
+          <td><strong>${a.peso||'—'}kg</strong></td>
+          <td>${imc?`<span class="badge badge-${imcC.color}">${Calc.formatNum(imc)}</span>`:'—'}</td>
+          <td>${a.percentualGordura?Calc.formatNum(a.percentualGordura)+'%':'—'}</td>
+          <td style="color:#10b981;font-weight:600">${a.massaMagra?Calc.formatNum(a.massaMagra)+'kg':'—'}</td>
+          <td>${a.massaGorda?Calc.formatNum(a.massaGorda)+'kg':'—'}</td>
+          <td>${a.cintura?a.cintura+'cm':'—'}</td>
+          <td>${a.rcq?Calc.formatNum(a.rcq,2):'—'}</td>
+        </tr>`;}).join('')}
+      </tbody>
+    </table>` : ''}
+
+    ${Object.keys(prs).length ? `
+    <h2>Records Pessoais — 1RM Estimado</h2>
+    <div class="prs">
+      ${Object.entries(prs).map(([ex,a])=>`<div class="pr-card">
+        <div class="ex">${ex}</div>
+        <div class="val">${a.rm1}kg</div>
+        <div class="date">${Calc.formatDate(a.date)} ${a.isPR?'· PR':''}${a.protocolo==='submax'?' · Submax':''}</div>
+      </div>`).join('')}
+    </div>
+    <table>
+      <thead><tr><th>Data</th><th>Exercício</th><th>Carga</th><th>Reps</th><th>1RM Est.</th><th>Fórmula</th><th>Protocolo</th></tr></thead>
+      <tbody>${forca.map(a=>`<tr>
+        <td>${Calc.formatDate(a.date)}</td>
+        <td><strong>${a.exercise||'—'}</strong></td>
+        <td>${a.carga||'—'}kg</td><td>${a.reps||'—'}</td>
+        <td style="color:#10b981;font-weight:700">${a.rm1||'—'}kg ${a.isPR?'★':''}</td>
+        <td>${a.formula||'Epley'}</td>
+        <td>${a.protocolo==='submax'?'Submax':'Direto'}</td>
+      </tr>`).join('')}</tbody>
+    </table>` : ''}
+
+    ${conc.length ? `
+    <h2>Protocolo Conconi / VO₂max</h2>
+    <table>
+      <thead><tr><th>Data</th><th>FC Pico</th><th>VMA</th><th>VO₂max</th><th>Limiar Anaeróbio</th></tr></thead>
+      <tbody>${conc.map(a=>`<tr>
+        <td>${Calc.formatDate(a.date)}</td>
+        <td>${a.fcPico||'—'} bpm</td>
+        <td>${a.vma||'—'} km/h</td>
+        <td style="color:#06b6d4;font-weight:700">${a.vo2max||'—'} ml/kg/min</td>
+        <td>${a.fcLimiar||'—'} bpm ${a.limiar2?`· ${a.limiar2} km/h`:''}</td>
+      </tr>`).join('')}</tbody>
+    </table>` : ''}
+
+    ${bf10.length ? `
+    <h2>Biofeedback — Médias (últimos ${bf10.length} check-ins)</h2>
+    <div class="bf-grid">
+      ${[['Sono',avgBf('sleep')],['Disposição',avgBf('mood')],['Energia',avgBf('energy')],['Estresse',avgBf('stress')],['PSE',avgBf('pse')]].map(([l,v])=>`
+        <div class="bf-card"><div class="lbl">${l}</div><div class="val">${v??'—'}</div></div>`).join('')}
+    </div>` : ''}
+
+    <div class="footer">Ficha gerada por ${settings.trainerName||'Personal PRO'} ${settings.cref?'· CREF '+settings.cref:''} — ${new Date().toLocaleDateString('pt-BR')} — Personal PRO · Sistema Profissional de Treinamento</div>
+  </body></html>`;
+
+  const blob    = new Blob([html], { type: 'text/html;charset=utf-8' });
+  const blobUrl = URL.createObjectURL(blob);
+  const link    = document.createElement('a');
+  link.href = blobUrl; link.target = '_blank'; link.rel = 'noopener';
+  document.body.appendChild(link); link.click(); document.body.removeChild(link);
+  setTimeout(() => URL.revokeObjectURL(blobUrl), 15000);
+  notify.success('Ficha aberta! Use Ctrl+P para salvar como PDF.');
 }
