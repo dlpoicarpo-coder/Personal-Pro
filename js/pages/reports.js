@@ -35,8 +35,11 @@ export async function renderReports() {
 }
 
 async function getStudentCycles(studentId) {
-  const workouts = (await db.getAll('workouts')).filter(w => w.studentId === studentId);
-  const cycles = [...new Set(workouts.map(w => w.cycle).filter(Boolean))];
+  // Convertemos ambos os IDs para String para evitar o erro de Tipo (ex: "7" == 7)
+  const workouts = (await db.getAll('workouts')).filter(w => String(w.studentId) === String(studentId));
+  
+  // Aceita tanto .cycle quanto .ciclo caso tenha sido salvo em português no banco
+  const cycles = [...new Set(workouts.map(w => w.cycle || w.ciclo).filter(Boolean))];
   return cycles.sort();
 }
 
