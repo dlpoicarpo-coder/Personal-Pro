@@ -260,58 +260,96 @@ class Database {
         { name: 'Bird Dog',                       muscleGroup: 'Core',         category: 'Funcional',  equipment: 'Peso corporal', loadType: 'bodyweight', description: 'Coordenação e estabilidade lombo-pélvica.' },
         { name: 'Rollout com Roda',               muscleGroup: 'Core',         category: 'Funcional',  equipment: 'Roda abdominal',loadType: 'bodyweight', description: 'Anti-extensão avançada para core.' },
         { name: 'Rotação com Cabo',               muscleGroup: 'Core',         category: 'Musculação', equipment: 'Cabo',          loadType: 'weight',     description: 'Rotação de tronco com resistência.' },
-        // CARDIO
-        { name: 'Esteira - Corrida',              muscleGroup: 'Cardio',       category: 'Cardio',     equipment: 'Esteira',       loadType: 'time',       defaultReps: '20min', description: 'Atividade aeróbica de média a alta intensidade.' },
-        { name: 'Esteira - Caminhada',            muscleGroup: 'Cardio',       category: 'Cardio',     equipment: 'Esteira',       loadType: 'time',       defaultReps: '30min', description: 'Aeróbico de baixa intensidade.' },
-        { name: 'Bicicleta Ergométrica',          muscleGroup: 'Cardio',       category: 'Cardio',     equipment: 'Bicicleta',     loadType: 'time',       defaultReps: '20min', description: 'Baixo impacto articular.' },
-        { name: 'Elíptico',                       muscleGroup: 'Cardio',       category: 'Cardio',     equipment: 'Elíptico',      loadType: 'time',       defaultReps: '20min', description: 'Aeróbico de baixo impacto articular.' },
-        { name: 'Remo Ergométrico',               muscleGroup: 'Cardio',       category: 'Cardio',     equipment: 'Remo',          loadType: 'time',       defaultReps: '15min', description: 'Cardio de corpo inteiro.' },
-        { name: 'HIIT Genérico',                  muscleGroup: 'Cardio',       category: 'Cardio',     equipment: 'Variado',       loadType: 'time',       defaultReps: '30s',   description: 'Treino Intervalado de Alta Intensidade.' },
-        // FUNCIONAL
-        { name: 'Burpee',                         muscleGroup: 'Corpo Inteiro',category: 'Funcional',  equipment: 'Peso corporal', loadType: 'bodyweight', description: 'Exercício metabólico completo.' },
-        { name: 'Kettlebell Swing',               muscleGroup: 'Corpo Inteiro',category: 'Funcional',  equipment: 'Kettlebell',    loadType: 'weight',     description: 'Movimento explosivo de quadril.' },
-        { name: 'Kettlebell Goblet Squat',        muscleGroup: 'Quadríceps',   category: 'Funcional',  equipment: 'Kettlebell',    loadType: 'weight',     description: 'Agachamento com kettlebell.' },
-        { name: 'Turkish Get-Up',                 muscleGroup: 'Corpo Inteiro',category: 'Funcional',  equipment: 'Kettlebell',    loadType: 'weight',     description: 'Movimento complexo para estabilidade total.' },
-        { name: 'Box Jump',                       muscleGroup: 'Corpo Inteiro',category: 'Funcional',  equipment: 'Caixote',       loadType: 'bodyweight', description: 'Salto explosivo para potência.' },
-        { name: 'Farmer Walk',                    muscleGroup: 'Corpo Inteiro',category: 'Funcional',  equipment: 'Halteres',      loadType: 'weight',     description: 'Caminhada com carga para força funcional.' },
-        { name: 'Battle Rope',                    muscleGroup: 'Corpo Inteiro',category: 'Funcional',  equipment: 'Corda',         loadType: 'time',       defaultReps: '30s',   description: 'Exercício metabólico de alta intensidade.' },
-        { name: 'Slam Ball',                      muscleGroup: 'Corpo Inteiro',category: 'Funcional',  equipment: 'Medicine Ball', loadType: 'weight',     description: 'Potência e força explosiva.' },
+        // CARDIO / ENDURANCE — expandido
+        { name: 'Esteira - Corrida',               muscleGroup: 'Cardio',        category: 'Cardio',     equipment: 'Esteira',        loadType: 'time',       defaultReps: '20min', intensityField: 'speed_kmh',  description: 'Corrida aeróbica. Registre velocidade (km/h).' },
+        { name: 'Esteira - Caminhada',             muscleGroup: 'Cardio',        category: 'Cardio',     equipment: 'Esteira',        loadType: 'time',       defaultReps: '30min', intensityField: 'speed_kmh',  description: 'Caminhada aeróbica de baixa intensidade.' },
+        { name: 'Esteira - Intervalado (HIIT)',    muscleGroup: 'Cardio',        category: 'Cardio',     equipment: 'Esteira',        loadType: 'time',       defaultReps: '30s',   intensityField: 'speed_kmh',  description: 'Sprint + recuperação. Ex: 30s rápido / 90s lento.' },
+        { name: 'Corrida ao Ar Livre',             muscleGroup: 'Cardio',        category: 'Cardio',     equipment: 'Nenhum',         loadType: 'time',       defaultReps: '30min', intensityField: 'pace_min_km',description: 'Corrida externa. Registre pace (min/km).' },
+        { name: 'Caminhada ao Ar Livre',           muscleGroup: 'Cardio',        category: 'Cardio',     equipment: 'Nenhum',         loadType: 'time',       defaultReps: '40min', intensityField: 'pace_min_km',description: 'Caminhada externa de baixa intensidade.' },
+        { name: 'Bicicleta Ergométrica',           muscleGroup: 'Cardio',        category: 'Cardio',     equipment: 'Bicicleta',      loadType: 'time',       defaultReps: '20min', intensityField: 'watts',      description: 'Pedalada indoor. Registre potência (watts) ou RPM.' },
+        { name: 'Bicicleta Ergométrica - HIIT',   muscleGroup: 'Cardio',        category: 'Cardio',     equipment: 'Bicicleta',      loadType: 'time',       defaultReps: '20s',   intensityField: 'watts',      description: 'Sprint de 20s + recuperação de 40s. 8-12 rounds (Tabata).' },
+        { name: 'Ciclismo ao Ar Livre',            muscleGroup: 'Cardio',        category: 'Cardio',     equipment: 'Bicicleta',      loadType: 'time',       defaultReps: '45min', intensityField: 'speed_kmh',  description: 'Pedalar externo. Registre velocidade e distância.' },
+        { name: 'Elíptico',                        muscleGroup: 'Cardio',        category: 'Cardio',     equipment: 'Elíptico',       loadType: 'time',       defaultReps: '20min', intensityField: 'level',      description: 'Aeróbico de baixo impacto. Registre nível de resistência.' },
+        { name: 'Remo Ergométrico',                muscleGroup: 'Cardio',        category: 'Cardio',     equipment: 'Remo',           loadType: 'time',       defaultReps: '15min', intensityField: 'pace_500m',  description: 'Remo indoor. Registre pace/500m e dividir por splits.' },
+        { name: 'Remo Ergométrico - Sprint',       muscleGroup: 'Cardio',        category: 'Cardio',     equipment: 'Remo',           loadType: 'time',       defaultReps: '250m',  intensityField: 'pace_500m',  description: 'Sprints de 250m com recuperação ativa.' },
+        { name: 'Natação - Nado Livre',            muscleGroup: 'Cardio',        category: 'Cardio',     equipment: 'Piscina',        loadType: 'time',       defaultReps: '30min', intensityField: 'pace_100m',  description: 'Nado contínuo. Registre pace/100m.' },
+        { name: 'Natação - Intervalado',           muscleGroup: 'Cardio',        category: 'Cardio',     equipment: 'Piscina',        loadType: 'time',       defaultReps: '50m',   intensityField: 'pace_100m',  description: 'Series de 50m com descanso controlado.' },
+        { name: 'Pular Corda',                     muscleGroup: 'Cardio',        category: 'Cardio',     equipment: 'Corda',          loadType: 'time',       defaultReps: '2min',  intensityField: 'jumps_min',  description: 'Aeróbico de alta intensidade. Ótimo para coordenação.' },
+        { name: 'Pular Corda - Dupla Entrada',    muscleGroup: 'Cardio',        category: 'Cardio',     equipment: 'Corda',          loadType: 'time',       defaultReps: '30s',   intensityField: 'jumps_min',  description: 'Técnica avançada. Alta demanda cardiovascular.' },
+        { name: 'HIIT Tabata',                     muscleGroup: 'Cardio',        category: 'Cardio',     equipment: 'Variado',        loadType: 'time',       defaultReps: '20s',   intensityField: 'level',      description: '20s max / 10s repouso × 8 rounds = 4min. Alta intensidade.' },
+        { name: 'HIIT 30-30',                      muscleGroup: 'Cardio',        category: 'Cardio',     equipment: 'Variado',        loadType: 'time',       defaultReps: '30s',   intensityField: 'level',      description: '30s esforço máximo / 30s recuperação ativa. 8-12 rounds.' },
+        { name: 'HIIT Pirâmide',                   muscleGroup: 'Cardio',        category: 'Cardio',     equipment: 'Variado',        loadType: 'time',       defaultReps: '30s',   intensityField: 'level',      description: '30s→60s→90s→60s→30s de esforço, com igual recuperação.' },
+        { name: 'Fartlek',                         muscleGroup: 'Cardio',        category: 'Cardio',     equipment: 'Nenhum',         loadType: 'time',       defaultReps: '30min', intensityField: 'speed_kmh',  description: 'Corrida com variações espontâneas de ritmo e intensidade.' },
+        { name: 'Corrida de Limiar (Tempo Run)',   muscleGroup: 'Cardio',        category: 'Cardio',     equipment: 'Nenhum',         loadType: 'time',       defaultReps: '20min', intensityField: 'pace_min_km',description: 'Corrida no limiar anaeróbio. ~80-85% FC Máx.' },
+        { name: 'Corrida Longa (LSD)',             muscleGroup: 'Cardio',        category: 'Cardio',     equipment: 'Nenhum',         loadType: 'time',       defaultReps: '60min', intensityField: 'pace_min_km',description: 'Long Slow Distance. 60-75% FC Máx. Base aeróbica.' },
+        { name: 'Corrida em Pista - Intervalado', muscleGroup: 'Cardio',        category: 'Cardio',     equipment: 'Pista',          loadType: 'time',       defaultReps: '400m',  intensityField: 'pace_min_km',description: 'Series de 400m, 800m ou 1km com recuperação ativa.' },
+        { name: 'Step Aeróbico',                   muscleGroup: 'Cardio',        category: 'Cardio',     equipment: 'Step',           loadType: 'time',       defaultReps: '30min', intensityField: 'level',      description: 'Aeróbico com step. Baixo impacto, boa coordenação.' },
+        { name: 'Spinning',                        muscleGroup: 'Cardio',        category: 'Cardio',     equipment: 'Bicicleta',      loadType: 'time',       defaultReps: '45min', intensityField: 'watts',      description: 'Ciclismo indoor em grupo. Alta intensidade.' },
+        { name: 'Escalador de Montanha',           muscleGroup: 'Cardio',        category: 'Funcional',  equipment: 'Peso corporal',  loadType: 'time',       defaultReps: '30s',   intensityField: 'reps',       description: 'Mountain climber. Core + cardio.' },
+        { name: 'Jumping Jack',                    muscleGroup: 'Cardio',        category: 'Funcional',  equipment: 'Peso corporal',  loadType: 'time',       defaultReps: '30s',   intensityField: 'reps',       description: 'Polichinelo. Aquecimento e cardio leve.' },
+        { name: 'Agachamento com Salto',           muscleGroup: 'Cardio',        category: 'Funcional',  equipment: 'Peso corporal',  loadType: 'bodyweight', defaultReps: '15',    intensityField: 'reps',       description: 'Jump squat. Potência + cardio metabólico.' },
+        { name: 'Burpee',                          muscleGroup: 'Corpo Inteiro', category: 'Funcional',  equipment: 'Peso corporal',  loadType: 'bodyweight', defaultReps: '10',    intensityField: 'reps',       description: 'Exercício metabólico completo. Alta demanda cardiorrespiratória.' },
+        { name: 'Kettlebell Swing',                muscleGroup: 'Corpo Inteiro', category: 'Funcional',  equipment: 'Kettlebell',     loadType: 'weight',     defaultReps: '15',    intensityField: 'weight',     description: 'Movimento explosivo de quadril. Cardio + força.' },
+        { name: 'Battle Rope - Ondas Alternadas', muscleGroup: 'Corpo Inteiro', category: 'Funcional',  equipment: 'Corda',          loadType: 'time',       defaultReps: '30s',   intensityField: 'reps',       description: 'Cardio de alta intensidade. Ombros e core.' },
+        { name: 'Box Jump',                        muscleGroup: 'Corpo Inteiro', category: 'Funcional',  equipment: 'Caixote',        loadType: 'bodyweight', defaultReps: '10',    intensityField: 'height_cm',  description: 'Salto explosivo. Potência de membros inferiores.' },
+        { name: 'Assault Bike',                    muscleGroup: 'Cardio',        category: 'Cardio',     equipment: 'Assault Bike',   loadType: 'time',       defaultReps: '20s',   intensityField: 'calories',   description: 'Bicicleta com braços. Exige todo o corpo. Alta intensidade.' },
+        { name: 'Ski Erg',                         muscleGroup: 'Cardio',        category: 'Cardio',     equipment: 'Ski Erg',        loadType: 'time',       defaultReps: '500m',  intensityField: 'pace_500m',  description: 'Simulador de esqui nórdico. Core + cardio.' },
+        { name: 'Air Runner',                      muscleGroup: 'Cardio',        category: 'Cardio',     equipment: 'Air Runner',     loadType: 'time',       defaultReps: '200m',  intensityField: 'pace_min_km',description: 'Esteira não motorizada. Mais demanda do que a convencional.' },
+        // FUNCIONAIS já existentes mantidos abaixo
+        { name: 'Kettlebell Goblet Squat',         muscleGroup: 'Quadríceps',    category: 'Funcional',  equipment: 'Kettlebell',     loadType: 'weight',     description: 'Agachamento com kettlebell.' },
+        { name: 'Turkish Get-Up',                  muscleGroup: 'Corpo Inteiro', category: 'Funcional',  equipment: 'Kettlebell',     loadType: 'weight',     description: 'Movimento complexo para estabilidade total.' },
+        { name: 'Farmer Walk',                     muscleGroup: 'Corpo Inteiro', category: 'Funcional',  equipment: 'Halteres',       loadType: 'weight',     description: 'Caminhada com carga para força funcional.' },
+        { name: 'Slam Ball',                       muscleGroup: 'Corpo Inteiro', category: 'Funcional',  equipment: 'Medicine Ball',  loadType: 'weight',     description: 'Potência e força explosiva.' },
         // MOBILIDADE
-        { name: 'Alongamento de Quadril',         muscleGroup: 'Mobilidade',   category: 'Mobilidade', equipment: 'Peso corporal', loadType: 'time',       defaultReps: '30s', description: 'Flexibilidade do flexor do quadril.' },
-        { name: 'Rotação Torácica',               muscleGroup: 'Mobilidade',   category: 'Mobilidade', equipment: 'Peso corporal', loadType: 'time',       defaultReps: '30s', description: 'Mobilidade da coluna torácica.' },
-        { name: 'Hip 90/90',                      muscleGroup: 'Mobilidade',   category: 'Mobilidade', equipment: 'Peso corporal', loadType: 'time',       defaultReps: '45s', description: 'Mobilidade de quadril em rotação interna/externa.' },
-        { name: 'Abertura de Quadril com Haltere',muscleGroup: 'Glúteos',      category: 'Mobilidade', equipment: 'Halteres',      loadType: 'weight',     description: 'Fortalecimento e mobilidade do glúteo médio.' },
-        // NOVOS — PEITO
-        { name: 'Supino Declinado com Halteres',  muscleGroup: 'Peito',        category: 'Musculação', equipment: 'Halteres',      loadType: 'weight',     description: 'Ênfase na porção inferior do peitoral.' },
-        { name: 'Mergulho entre Bancos',          muscleGroup: 'Peito',        category: 'Funcional',  equipment: 'Peso corporal', loadType: 'bodyweight', description: 'Tríceps e peitoral inferior com peso corporal.' },
-        { name: 'Cable Fly Médio',                muscleGroup: 'Peito',        category: 'Musculação', equipment: 'Cabo',          loadType: 'weight',     description: 'Voador no cabo na altura do peito.' },
-        // NOVOS — COSTAS
-        { name: 'Serrote com Halter',             muscleGroup: 'Costas',       category: 'Musculação', equipment: 'Halteres',      loadType: 'weight',     description: 'Remada unilateral em posição inclinada.' },
-        { name: 'Puxada com Triângulo',           muscleGroup: 'Costas',       category: 'Musculação', equipment: 'Cabo',          loadType: 'weight',     description: 'Puxada com pegada neutra, foco no dorsal.' },
-        { name: 'Rack Pull',                      muscleGroup: 'Costas',       category: 'Musculação', equipment: 'Barra',         loadType: 'weight',     description: 'Terra parcial com ênfase no trapézio.' },
-        // NOVOS — OMBROS
-        { name: 'Crucifixo Invertido',            muscleGroup: 'Ombros',       category: 'Musculação', equipment: 'Halteres',      loadType: 'weight',     description: 'Deltoide posterior com halteres.' },
-        { name: 'Elevação Lateral no Banco',      muscleGroup: 'Ombros',       category: 'Musculação', equipment: 'Halteres',      loadType: 'weight',     description: 'Variação com apoio para isolamento.' },
-        // NOVOS — PERNAS
-        { name: 'Agachamento Sissy',              muscleGroup: 'Quadríceps',   category: 'Musculação', equipment: 'Peso corporal', loadType: 'bodyweight', description: 'Isolamento do quadríceps sem equipamento.' },
-        { name: 'Cadeira Adutora',                muscleGroup: 'Glúteos',      category: 'Musculação', equipment: 'Máquina',       loadType: 'weight',     description: 'Isolamento dos adutores.' },
-        { name: 'Extensão de Quadril no Cabo',    muscleGroup: 'Glúteos',      category: 'Musculação', equipment: 'Cabo',          loadType: 'weight',     description: 'Isolamento do glúteo máximo.' },
-        { name: 'Agachamento Sumô com Barra',     muscleGroup: 'Glúteos',      category: 'Musculação', equipment: 'Barra',         loadType: 'weight',     description: 'Ênfase nos adutores e glúteos com barra.' },
-        { name: 'Elevação Pélvica com Elástico',  muscleGroup: 'Glúteos',      category: 'Funcional',  equipment: 'Elástico',      loadType: 'bodyweight', description: 'Ativação do glúteo médio e mínimo.' },
-        { name: 'Panturrilha Unilateral',         muscleGroup: 'Panturrilha',  category: 'Funcional',  equipment: 'Peso corporal', loadType: 'bodyweight', description: 'Força e equilíbrio na panturrilha.' },
-        // NOVOS — CORE AVANÇADO
-        { name: 'Hollow Body Hold',               muscleGroup: 'Core',         category: 'Funcional',  equipment: 'Peso corporal', loadType: 'time',       defaultReps: '20s', description: 'Posição de controle do core para ginástica.' },
-        { name: 'L-Sit',                          muscleGroup: 'Core',         category: 'Funcional',  equipment: 'Paralelas',     loadType: 'time',       defaultReps: '10s', description: 'Força compressiva do core.' },
-        { name: 'Hanging Knee Raise',             muscleGroup: 'Abdômen',      category: 'Funcional',  equipment: 'Barra Fixa',    loadType: 'bodyweight', description: 'Elevação de joelhos suspenso.' },
-        { name: 'Hanging Leg Raise',              muscleGroup: 'Abdômen',      category: 'Funcional',  equipment: 'Barra Fixa',    loadType: 'bodyweight', description: 'Elevação de pernas suspenso — avançado.' },
-        // NOVOS — REABILITAÇÃO / IDOSO
-        { name: 'Agachamento na Cadeira',         muscleGroup: 'Quadríceps',   category: 'Funcional',  equipment: 'Peso corporal', loadType: 'bodyweight', description: 'Variação assistida para iniciantes e idosos.' },
-        { name: 'Elevação de Tornozelo Sentado',  muscleGroup: 'Panturrilha',  category: 'Funcional',  equipment: 'Peso corporal', loadType: 'bodyweight', description: 'Mobilidade e força de tornozelo.' },
-        { name: 'Supino Sentado (Máquina)',       muscleGroup: 'Peito',        category: 'Musculação', equipment: 'Máquina',       loadType: 'weight',     description: 'Pressão de peito guiada — ideal para reabilitação.' },
-        { name: 'Remada com Elástico',            muscleGroup: 'Costas',       category: 'Funcional',  equipment: 'Elástico',      loadType: 'bodyweight', description: 'Remada com resistência elástica — baixo impacto.' },
-        { name: 'Marcha Estacionária',            muscleGroup: 'Cardio',       category: 'Funcional',  equipment: 'Peso corporal', loadType: 'time',       defaultReps: '60s', description: 'Aquecimento e cardio suave.' },
-        { name: 'Equilíbrio Unipodal',            muscleGroup: 'Core',         category: 'Funcional',  equipment: 'Peso corporal', loadType: 'time',       defaultReps: '30s', description: 'Propriocepção e estabilidade.' },
+        { name: 'Alongamento de Quadril',          muscleGroup: 'Mobilidade',    category: 'Mobilidade', equipment: 'Peso corporal',  loadType: 'time',       defaultReps: '30s', description: 'Flexibilidade do flexor do quadril.' },
+        { name: 'Rotação Torácica',                muscleGroup: 'Mobilidade',    category: 'Mobilidade', equipment: 'Peso corporal',  loadType: 'time',       defaultReps: '30s', description: 'Mobilidade da coluna torácica.' },
+        { name: 'Hip 90/90',                       muscleGroup: 'Mobilidade',    category: 'Mobilidade', equipment: 'Peso corporal',  loadType: 'time',       defaultReps: '45s', description: 'Mobilidade de quadril em rotação interna/externa.' },
+        { name: 'Abertura de Quadril com Haltere', muscleGroup: 'Glúteos',       category: 'Mobilidade', equipment: 'Halteres',       loadType: 'weight',     description: 'Fortalecimento e mobilidade do glúteo médio.' },
       ];
+
+      // Métodos de intensificação
+      const methods = [
+        // Força / Hipertrofia
+        { name: 'Drop-set',       category: 'Hipertrofia', description: 'Executar até a falha, reduzir carga ~20% e continuar sem descanso. Repetir 2-3x.', sets: '3+drops', repsHint: '8-12 + drops', restHint: '120-180s entre drop-sets completos' },
+        { name: 'Pirâmide Crescente', category: 'Força',   description: 'Aumentar carga a cada série, reduzir reps: 12→10→8→6. Boa para progressão.', sets: '4', repsHint: '12→10→8→6', restHint: '90-120s' },
+        { name: 'Pirâmide Decrescente', category: 'Força', description: 'Iniciar pesado e reduzir carga a cada série: 6→8→10→12.', sets: '4', repsHint: '6→8→10→12', restHint: '90-120s' },
+        { name: 'Pirâmide Dupla',  category: 'Hipertrofia', description: 'Crescente depois decrescente: 12→10→8→10→12. Máximo volume.', sets: '5', repsHint: '12→10→8→10→12', restHint: '90s' },
+        { name: 'Rest-Pause',      category: 'Força',       description: 'Executar até a falha, descanso de 15-20s, continuar até nova falha. 2-3 mini-séries.', sets: '1-3', repsHint: 'Até a falha + pausa', restHint: '15-20s entre mini-séries' },
+        { name: 'Super-série Agonista', category: 'Hipertrofia', description: 'Dois exercícios do mesmo grupo muscular sem descanso. Ex: Supino + Crucifixo.', sets: '3', repsHint: '10-12 cada', restHint: '90s após o par' },
+        { name: 'Super-série Antagonista', category: 'Hipertrofia', description: 'Dois exercícios de grupos opostos sem descanso. Ex: Rosca + Tríceps.', sets: '3', repsHint: '10-12 cada', restHint: '60s após o par' },
+        { name: 'Tri-set',         category: 'Hipertrofia', description: 'Três exercícios consecutivos sem descanso. Alto estímulo metabólico.', sets: '3', repsHint: '8-12 cada', restHint: '120s após o tri' },
+        { name: 'Série Gigante',   category: 'Hipertrofia', description: '4+ exercícios consecutivos. Máximo estímulo. Reduzir cargas.', sets: '3', repsHint: '10-15 cada', restHint: '180s após o set' },
+        { name: 'Cluster',         category: 'Força',       description: 'Carga 85-95% 1RM. Execução: 2-3 reps, pausa 10-15s, repetir até 5 cluster. Força máxima.', sets: '5', repsHint: '2-3 por cluster', restHint: '10-15s entre clusters; 3-5min entre sets' },
+        { name: 'Excêntrico Acentuado', category: 'Hipertrofia', description: 'Fase excêntrica 4-6 segundos. Provoca mais dano muscular e hipertrofia.', sets: '3-4', repsHint: '6-8', restHint: '120s' },
+        { name: 'Isometria',       category: 'Força',       description: 'Sustentação em posição de tensão por 30-60s. Boa para estabilização.', sets: '3', repsHint: '30-60s', restHint: '90s' },
+        { name: 'Pré-exaustão',    category: 'Hipertrofia', description: 'Isolamento antes do composto. Ex: Crucifixo → Supino. Fatiga o músculo-alvo primeiro.', sets: '3', repsHint: '12 iso + 8-10 composto', restHint: '0s entre, 120s entre séries' },
+        { name: 'Bi-set',          category: 'Hipertrofia', description: 'Dois exercícios para o mesmo músculo, sem pausa. Similar ao super-set agonista.', sets: '3-4', repsHint: '10 cada', restHint: '90s após o par' },
+        { name: '21s',             category: 'Hipertrofia', description: '7 reps parciais (0-90°) + 7 reps parciais (90-180°) + 7 reps completas = 21. Para bíceps.', sets: '3', repsHint: '21 (7+7+7)', restHint: '90-120s' },
+        { name: 'Stripping',       category: 'Hipertrofia', description: 'Similar ao drop-set com barra: remover anilhas nos dois lados sem parar.', sets: '1 longa', repsHint: 'Até a falha com cada carga', restHint: '120-180s' },
+        { name: 'FST-7',           category: 'Hipertrofia', description: 'Fascia Stretch Training: 7 séries do exercício isolador com 30-45s descanso. Alta congestão.', sets: '7', repsHint: '12-15', restHint: '30-45s' },
+        // Cardio / Endurance
+        { name: 'Zona 1 (Z1)',     category: 'Cardio',      description: 'Intensidade muito leve. <65% FC Máx. Recuperação ativa, base aeróbica.', sets: '1', repsHint: '20-60min contínuo', restHint: 'Sem descanso' },
+        { name: 'Zona 2 (Z2)',     category: 'Cardio',      description: '65-75% FC Máx. Base aeróbica. Pode falar em frases. Longo e lento.', sets: '1', repsHint: '30-90min contínuo', restHint: 'Sem descanso' },
+        { name: 'Zona 3 (Z3)',     category: 'Cardio',      description: '75-80% FC Máx. Limiar aeróbico inferior. Confortavelmente difícil.', sets: '1', repsHint: '20-40min', restHint: 'Sem descanso' },
+        { name: 'Zona 4 (Z4) — Limiar', category: 'Cardio', description: '80-90% FC Máx. Limiar anaeróbio. Difícil de sustentar >20min.', sets: '1-3', repsHint: '10-20min', restHint: '5min recuperação ativa entre blocos' },
+        { name: 'Zona 5 (Z5) — VO2max', category: 'Cardio', description: '90-100% FC Máx. Intervalos curtos. Melhora VO2max.', sets: '4-8', repsHint: '3-5min esforço', restHint: '3-5min recuperação' },
+        { name: 'Tabata',          category: 'Cardio',      description: '20s máximo / 10s repouso × 8 rounds = 4min. Intensidade 170%+ VO2max.', sets: '1-3 blocos', repsHint: '20s esforço / 10s repouso', restHint: '60-90s entre blocos Tabata' },
+        { name: 'HIIT 1:2',        category: 'Cardio',      description: 'Ratio 1:2 trabalho:descanso. Ex: 30s esforço / 60s recuperação. 8-12 rounds.', sets: '8-12', repsHint: '30s esforço', restHint: '60s recuperação ativa' },
+        { name: 'HIIT 1:1',        category: 'Cardio',      description: 'Ratio 1:1. Ex: 30s esforço / 30s recuperação. Mais intenso.', sets: '8-12', repsHint: '30s esforço', restHint: '30s recuperação ativa' },
+        { name: 'SIT (Sprint Interval Training)', category: 'Cardio', description: 'Sprints de 10-30s máximos. 4-6 repetições. Melhora potência anaeróbica.', sets: '4-6', repsHint: '10-30s sprint', restHint: '2-4min recuperação completa' },
+        { name: 'Série de Repetição (VO2max)', category: 'Cardio', description: 'Intervalos de 3-5min a 95-100% VO2max. Base da periodização de atletas.', sets: '4-6', repsHint: '3-5min', restHint: 'Igual ao esforço' },
+        { name: 'Steady State',    category: 'Cardio',      description: 'Ritmo constante e moderado durante todo o tempo. Zona 2-3. Base aeróbica.', sets: '1', repsHint: '20-60min', restHint: 'Sem descanso' },
+        { name: 'Progressivo',     category: 'Cardio',      description: 'Aumentar velocidade/intensidade a cada bloco de tempo. Ex: +0.5km/h a cada 5min.', sets: '1', repsHint: 'Progressivo', restHint: 'Sem descanso' },
+      ];
+
+      // Salvar métodos se não existirem
+      const existingMethods = await this.getAll('methods');
+      const existingMethodNames = new Set(existingMethods.map(m => m.name));
+      for (const m of methods) {
+        if (!existingMethodNames.has(m.name)) {
+          await this.add('methods', m);
+        }
+      }
 
       // Adicionar apenas exercícios que não existem ainda
       const existing = await this.getAll('exercises');
