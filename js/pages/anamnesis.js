@@ -188,40 +188,52 @@ export async function renderAnamneseForm() {
   `;
 }
 
-export function initAnamneseForm() {
+export function initAnamneseForm(trainerId) {
   document.getElementById('anamneseForm')?.addEventListener('submit', async (e) => {
     e.preventDefault();
     const fd = new FormData(e.target);
     const data = Object.fromEntries(fd);
     data.submittedAt = new Date().toISOString();
 
-    // Capturar trainerId da URL para salvar no banco correto
-    const params = new URLSearchParams(window.location.hash.split('?')[1] || '');
-    const trainerId = params.get('trainer');
-    if (trainerId) data.trainer_id = trainerId;
+    // Usar trainerId passado via parâmetro ou tentar capturar da URL como fallback
+    const tid = trainerId || new URLSearchParams(window.location.hash.split('?')[1] || '').get('trainer') || '';
+    if (tid) data.trainer_id = tid;
 
-    const { default: db } = await import('../db.js');
+    try {
+      const btn = e.target.querySelector('[type=submit]') || document.getElementById('anamneseSubmit');
+      if (btn) { btn.disabled = true; btn.textContent = 'Salvando...'; }
 
-    // Salvar via Supabase diretamente com o trainer_id
-    if (trainerId) {
-      try {
+      if (tid) {
+        // Salvar direto no Supabase com trainer_id sem precisar de auth
         const { getSupabase } = await import('../utils/auth.js');
-        const sb = getSupabase();
+        const sb = getSupabase?.();
         if (sb) {
-          const { error } = await sb.from('anamneses').insert([{ ...data, trainer_id: trainerId }]);
+          const { error } = await sb.from('anamneses').insert([{ ...data, trainer_id: tid }]);
           if (error) throw error;
+        } else {
+          // Fallback localStorage
+          const { default: db } = await import('../db.js');
+          await db.add('anamnesis', data);
         }
-      } catch (err) {
-        console.error('Anamnese save error:', err);
-        // Fallback: salvar no localStorage para o personal resgatar depois
+      } else {
+        const { default: db } = await import('../db.js');
         await db.add('anamnesis', data);
       }
-    } else {
-      await db.add('anamnesis', data);
-    }
 
-    e.target.style.display = 'none';
-    document.getElementById('anamneseSuccess').style.display = '';
+      e.target.style.display = 'none';
+      document.getElementById('anamneseSuccess').style.display = '';
+    } catch (err) {
+      console.error('Anamnese save error:', err);
+      // Fallback localStorage
+      try {
+        const { default: db } = await import('../db.js');
+        await db.add('anamnesis', data);
+        e.target.style.display = 'none';
+        document.getElementById('anamneseSuccess').style.display = '';
+      } catch(e2) {
+        alert('Erro ao salvar. Tente novamente.');
+      }
+    }
   });
 }
 
