@@ -46,8 +46,12 @@ async function getStudentCycles(studentId) {
 async function renderStudentReport(studentId, cycleFilter = '') {
   const student = await db.get('students', studentId);
   if (!student) return '';
-  const allWorkouts = (await db.getAll('workouts')).filter(w => w.studentId === studentId);
-  const workouts = cycleFilter ? allWorkouts.filter(w => w.cycle === cycleFilter) : allWorkouts;
+  
+  // Ajustado aqui também para garantir a busca correta dos treinos por ID em formato String
+  const allWorkouts = (await db.getAll('workouts')).filter(w => String(w.studentId) === String(studentId));
+  const workouts = cycleFilter ? allWorkouts.filter(w => (w.cycle || w.ciclo) === cycleFilter) : allWorkouts;
+  
+  // ... o restante da função segue igual
   const sessions = (await db.getAll('sessions')).filter(s => s.studentId === studentId);
   const bf = (await db.getAll('biofeedback')).filter(b => b.studentId === studentId).sort((a, b) => new Date(a.date) - new Date(b.date));
   const assessments = (await db.getAll('assessments')).filter(a => a.studentId === studentId);
