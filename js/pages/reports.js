@@ -911,4 +911,4 @@ async function loadPeriodizationForReport(studentId) {
       <span style="color:#3b82f6">● Deload</span>
     </div>
   `;
-}
+
