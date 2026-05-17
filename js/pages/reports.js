@@ -455,6 +455,44 @@ export async function initReports(navigateFn) {
     else                 parecerTecnico += 'PSE baixa — espaço para aumento de carga ou densidade. ';
     if (sleepNum > 0 && sleepNum < 6) parecerTecnico += 'Sono comprometido: orientar higiene do sono. ';
     if (totalLoad > 2000)             parecerTecnico += 'Carga acumulada significativa — monitorar sinais de overreaching (queda de performance, irritabilidade, FC elevada em repouso).';
+if (sleepNum > 0 && sleepNum < 6) parecerTecnico += 'Sono comprometido: orientar higiene do sono. ';
+    if (totalLoad > 2000)             parecerTecnico += 'Carga acumulada significativa — monitorar sinais de overreaching (queda de performance, irritabilidade, FC elevada em repouso).';
+
+    // ==========================================================
+    // COLE ESTE BLOCO AQUI (LOGO ANTES DOS GRÁFICOS)
+    // ==========================================================
+    const loadProgression = {};
+    sessions
+      .sort((a, b) => new Date(a.date) - new Date(b.date))
+      .forEach(s => {
+        (s.setLog || []).forEach(set => {
+          const exName = (s.exercises || [])[set.exIdx]?.name;
+          if (!exName || !set.load || set.load <= 0) return;
+          if (!loadProgression[exName]) loadProgression[exName] = [];
+          loadProgression[exName].push({
+            date: s.date,
+            load: set.load,
+            reps: set.reps || 0,
+            vol:  set.load * (set.reps || 1),
+          });
+        });
+      });
+
+    const progressionItems = Object.entries(loadProgression)
+      .filter(([, sets]) => sets.length >= 2)
+      .map(([name, sets]) => {
+        const first     = sets[0];
+        const last      = sets[sets.length - 1];
+        const maxLoad   = Math.max(...sets.map(s => s.load));
+        const minLoad   = Math.min(...sets.map(s => s.load));
+        const delta     = last.load - first.load;
+        const pct       = first.load > 0 ? Math.round((delta / first.load) * 100) : 0;
+        const totalVol  = sets.reduce((t, s) => t + s.vol, 0);
+        const avgReps   = Math.round(sets.reduce((t, s) => t + s.reps, 0) / sets.length);
+        return { name, first, last, maxLoad, minLoad, delta, pct, totalVol, avgReps, sessions: sets.length };
+      })
+      .sort((a, b) => Math.abs(b.pct) - Math.abs(a.pct))
+      .slice(0, 8);
 
     // ── Capturar gráficos por ID (não por posição) ──
     const chartIds = [
