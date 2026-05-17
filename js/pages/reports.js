@@ -341,19 +341,47 @@ export async function initReports(navigateFn) {
         </tr>`).join('')}</tbody></table>`;
     }
 
-    // Workout prescriptions for PDF
+    // Resumo compacto das fichas (SEM tabela detalhada — muito extenso para o aluno)
     let workoutTableHTML = '';
     if (workouts.length) {
-      workoutTableHTML = `<h2>Fichas de Treino Prescritas</h2>
-        <p class="section-desc">Fichas de treinamento criadas pelo treinador para o período selecionado.</p>`;
+      // Agrupar por ciclo
+      const byCycle = {};
       workouts.forEach(w => {
-        workoutTableHTML += `<h3 style="font-size:14px;margin-top:16px">${w.name} <span style="color:#999;font-size:12px">${w.cycle || ''} — ${new Date(w.date).toLocaleDateString('pt-BR')}</span></h3>`;
-        if (w.exercises?.length) {
-          workoutTableHTML += `<table><thead><tr><th>Exercício</th><th>Séries</th><th>Reps</th><th>Carga</th><th>Descanso</th><th>Método</th></tr></thead><tbody>
-          ${w.exercises.map(e => `<tr><td>${e.name}</td><td>${e.sets}</td><td>${e.reps}</td><td>${e.load || '-'}</td><td>${e.rest || '-'}s</td><td>${e.method || '-'}</td></tr>`).join('')}
-          </tbody></table>`;
-        }
+        const c = w.cycle || 'Geral';
+        if (!byCycle[c]) byCycle[c] = [];
+        byCycle[c].push(w);
       });
+
+      workoutTableHTML = `<h2>Treinos Prescritos</h2>
+        <p class="section-desc">Resumo das fichas de treino criadas pelo seu personal trainer.</p>
+        <div class="workout-summary">`;
+
+      Object.entries(byCycle).forEach(([cycle, wks]) => {
+        workoutTableHTML += `<div class="cycle-block">
+          <h3 style="font-size:13px;color:#00A499;margin:14px 0 8px;border-bottom:1px solid #e0e0e0;padding-bottom:4px">
+            ${cycle} <span style="font-weight:normal;color:#999;font-size:11px">(${wks.length} treino${wks.length>1?'s':''})</span>
+          </h3>
+          <table style="font-size:12px;margin-bottom:8px">
+            <thead><tr><th>Treino</th><th>Data</th><th>Exercícios</th><th>Músculos</th></tr></thead>
+            <tbody>
+              ${wks.map(w => {
+                const muscles = [...new Set((w.exercises||[]).map(e => e.muscleGroup || '').filter(Boolean))].slice(0,3).join(', ');
+                return `<tr>
+                  <td><strong>${w.name}</strong></td>
+                  <td>${new Date(w.date).toLocaleDateString('pt-BR')}</td>
+                  <td style="text-align:center">${(w.exercises||[]).length}</td>
+                  <td style="color:#666;font-size:11px">${muscles || '-'}</td>
+                </tr>`;
+              }).join('')}
+            </tbody>
+          </table>
+        </div>`;
+      });
+
+      workoutTableHTML += `</div>
+        <p style="font-size:11px;color:#888;margin-top:6px;font-style:italic">
+          * As fichas completas com exercícios, séries e cargas estão disponíveis no aplicativo Personal PRO.
+        </p>`;
     }
 
     printWin.document.write(`<!DOCTYPE html><html><head><title>Dossiê - ${student.name}</title>
@@ -421,18 +449,41 @@ async function initReportCharts(studentId) {
   const assessments = (await db.getAll('assessments')).filter(a => a.studentId === studentId);
   const co = { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { color: '#94a3b8', font: { size: 11 } } } }, scales: { y: { ticks: { color: '#64748b' }, grid: { color: 'rgba(255,255,255,0.05)' } }, x: { ticks: { color: '#94a3b8' }, grid: { display: false } } } };
 
+  // Wellness chart — filtrar apenas registros que têm dados de bem-estar (não só PSE do tracker)
   const wCtx = document.getElementById('wellnessChart');
-  if (wCtx && bf.length > 1) {
+  const bfWellness = bf.filter(b => b.sleep || b.mood || b.energy || b.stress);
+  if (wCtx && bfWellness.length > 1) {
     new Chart(wCtx, {
-      type: 'line', data: {
-        labels: bf.map(b => Calc.formatDate(b.date).slice(0,5)), datasets: [
-          { label: 'Sono',        data: bf.map(b => b.sleep  || null), borderColor: '#8b5cf6', tension: 0.3, pointRadius: 3, borderWidth: 1.5, fill: false },
-          { label: 'Disposição',  data: bf.map(b => b.mood   || null), borderColor: '#10b981', tension: 0.3, pointRadius: 3, borderWidth: 1.5, fill: false },
-          { label: 'Energia',     data: bf.map(b => b.energy || null), borderColor: '#06b6d4', tension: 0.3, pointRadius: 3, borderWidth: 1.5, fill: false },
-          { label: 'Estresse',    data: bf.map(b => b.stress || null), borderColor: '#f59e0b', tension: 0.3, pointRadius: 3, borderWidth: 1.5, fill: false, borderDash: [5, 5] },
+      type: 'line',
+      data: {
+        labels: bfWellness.map(b => Calc.formatDate(b.date).slice(0,5)),
+        datasets: [
+          { label: 'Sono',       data: bfWellness.map(b => b.sleep  || null), borderColor: '#8b5cf6', backgroundColor: 'rgba(139,92,246,0.05)', tension: 0.3, pointRadius: 4, borderWidth: 2, fill: false, spanGaps: true },
+          { label: 'Disposição', data: bfWellness.map(b => b.mood   || null), borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,0.05)',  tension: 0.3, pointRadius: 4, borderWidth: 2, fill: false, spanGaps: true },
+          { label: 'Energia',    data: bfWellness.map(b => b.energy || null), borderColor: '#06b6d4', backgroundColor: 'rgba(6,182,212,0.05)',   tension: 0.3, pointRadius: 4, borderWidth: 2, fill: false, spanGaps: true },
+          { label: 'Estresse',   data: bfWellness.map(b => b.stress || null), borderColor: '#f59e0b', backgroundColor: 'rgba(245,158,11,0.05)',  tension: 0.3, pointRadius: 4, borderWidth: 2, fill: false, borderDash: [5,3], spanGaps: true },
         ]
-      }, options: { ...co, scales: { ...co.scales, y: { ...co.scales.y, min: 0, max: 10 } } }
+      },
+      options: {
+        ...co,
+        scales: {
+          ...co.scales,
+          y: { ...co.scales.y, min: 0, max: 10,
+            ticks: { color: '#64748b', stepSize: 2 }
+          }
+        },
+        plugins: {
+          ...co.plugins,
+          annotation: {
+            annotations: {
+              goodLine: { type: 'line', yMin: 7, yMax: 7, borderColor: 'rgba(16,185,129,0.3)', borderWidth: 1, borderDash: [3,3], label: { content: 'Bom (7)', enabled: true, color: '#10b981', font: { size: 9 } } }
+            }
+          }
+        }
+      }
     });
+  } else if (wCtx) {
+    wCtx.parentElement.innerHTML = '<p class="text-muted text-sm text-center" style="padding:40px">Sem dados de bem-estar suficientes. Registre check-ins de biofeedback com sono, disposição e energia.</p>';
   }
 
   const lCtx = document.getElementById('loadChart');
