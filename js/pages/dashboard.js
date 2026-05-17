@@ -30,7 +30,8 @@ export async function renderDashboard() {
   const todayStr = now.toISOString().slice(0, 10);
   const todaySchedules = schedules.filter(s => s.date === todayStr && s.status === 'scheduled');
 
-  // Receita do mês — usa paidDate (data real do pagamento) ou dueDate como fallback
+  // Receita do mês — registros paid cuja paidDate (ou dueDate) cai neste mês
+  // Se não tiver paidDate, usa dueDate como referência de quando foi recebido
   const monthRevenue = financial
     .filter(f => {
       if (f.status !== 'paid') return false;
@@ -38,6 +39,10 @@ export async function renderDashboard() {
       return refDate.getMonth() === thisMonth && refDate.getFullYear() === thisYear;
     })
     .reduce((t, f) => t + (parseFloat(f.amount) || 0), 0);
+
+  // Se não há registros com vencimento neste mês mas há pagos, mostrar total pago
+  const anyPaidThisMonth = monthRevenue > 0;
+  const displayRevenue   = anyPaidThisMonth ? monthRevenue : null;
 
   // Taxa de adesão (sessões realizadas / treinos agendados no mês)
   const monthScheduled = schedules.filter(s => { const d = new Date(s.date); return d.getMonth() === thisMonth && d.getFullYear() === thisYear; });
@@ -79,7 +84,7 @@ export async function renderDashboard() {
         <div class="stat-change ${adherenceRate >= 70 ? 'positive' : 'negative'}">${adherenceRate}% de adesão</div>
       </div>
       <div class="stat-card">
-        <div class="stat-value text-gradient">${monthRevenue > 0 ? 'R$ ' + monthRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 0 }) : '—'}</div>
+        <div class="stat-value text-gradient">${displayRevenue !== null ? 'R$ ' + Math.round(displayRevenue).toLocaleString('pt-BR') : '—'}</div>
         <div class="stat-label">Receita do Mês</div>
         <div class="stat-change">${new Date().toLocaleDateString('pt-BR', { month: 'long' })}</div>
       </div>
