@@ -28,12 +28,28 @@ export async function renderFinancial() {
   const thisMonth = now.getMonth();
   const thisYear  = now.getFullYear();
 
-  // Stats do mês atual
-  const monthRecs   = records.filter(r => { const d = new Date(r.dueDate); return d.getMonth()===thisMonth && d.getFullYear()===thisYear; });
+  // Helper: checar se uma data cai no mês/ano atual
+  const inThisMonth = (dateStr) => {
+    if (!dateStr) return false;
+    const d = new Date(dateStr);
+    return d.getMonth() === thisMonth && d.getFullYear() === thisYear;
+  };
+
+  // ESPERADO: registros com vencimento neste mês (qualquer status)
+  const monthRecs   = records.filter(r => inThisMonth(r.dueDate));
   const totalExpect = monthRecs.reduce((t, r) => t + (r.amount||0), 0);
-  const totalPaid   = monthRecs.filter(r => r.status==='paid').reduce((t, r) => t + (r.amount||0), 0);
-  const totalPend   = totalExpect - totalPaid;
-  const overdue     = records.filter(r => r.status==='pending' && new Date(r.dueDate) < now);
+
+  // RECEBIDO: registros marcados como pagos com paidDate neste mês
+  // Se não tem paidDate usa dueDate como fallback
+  const paidThisMonth = records.filter(r => {
+    if (r.status !== 'paid') return false;
+    const refDate = r.paidDate || r.dueDate;
+    return inThisMonth(refDate);
+  });
+  const totalPaid = paidThisMonth.reduce((t, r) => t + (r.amount||0), 0);
+
+  const totalPend   = monthRecs.filter(r => r.status !== 'paid').reduce((t, r) => t + (r.amount||0), 0);
+  const overdue     = records.filter(r => r.status === 'pending' && new Date(r.dueDate) < now);
   const overdueAmt  = overdue.reduce((t, r) => t + (r.amount||0), 0);
   const collRate    = totalExpect > 0 ? Math.round((totalPaid/totalExpect)*100) : 0;
 
@@ -257,18 +273,21 @@ export function initFinancial(navigateFn) {
         const now = new Date();
         const labels = [], paid = [], expected = [];
         for (let i = 5; i >= 0; i--) {
-          const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+          const d  = new Date(now.getFullYear(), now.getMonth() - i, 1);
           const mo = d.getMonth(), yr = d.getFullYear();
+          const inMonth = (ds) => { if (!ds) return false; const dd = new Date(ds); return dd.getMonth()===mo && dd.getFullYear()===yr; };
           labels.push(d.toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' }));
-          paid.push(records.filter(r=>r.status==='paid'&&new Date(r.paidDate||r.dueDate).getMonth()===mo&&new Date(r.paidDate||r.dueDate).getFullYear()===yr).reduce((t,r)=>t+(r.amount||0),0));
-          expected.push(records.filter(r=>{const dd=new Date(r.dueDate);return dd.getMonth()===mo&&dd.getFullYear()===yr;}).reduce((t,r)=>t+(r.amount||0),0));
+          // Recebido = pagos cuja paidDate (ou dueDate se não tiver) está neste mês
+          paid.push(records.filter(r => r.status==='paid' && inMonth(r.paidDate || r.dueDate)).reduce((t,r) => t+(r.amount||0), 0));
+          // Esperado = todos com vencimento neste mês
+          expected.push(records.filter(r => inMonth(r.dueDate)).reduce((t,r) => t+(r.amount||0), 0));
         }
         new Chart(canvas, {
           type: 'bar',
           data: {
             labels,
             datasets: [
-              { label: 'Recebido', data: paid, backgroundColor: 'rgba(16,185,129,0.7)', borderRadius: 5 },
+              { label: 'Recebido', data: paid,     backgroundColor: 'rgba(16,185,129,0.75)', borderRadius: 5 },
               { label: 'Esperado', data: expected, backgroundColor: 'rgba(16,185,129,0.15)', borderRadius: 5 },
             ]
           },
@@ -276,8 +295,8 @@ export function initFinancial(navigateFn) {
             responsive: true, maintainAspectRatio: false,
             plugins: { legend: { display: false } },
             scales: {
-              y: { ticks: { color:'#64748b', font:{size:9}, callback: v => 'R$' + (v/1000).toFixed(0)+'k' }, grid:{color:'rgba(148,163,184,0.07)'} },
-              x: { ticks: { color:'#94a3b8', font:{size:9} }, grid:{display:false} }
+              y: { ticks: { color:'#64748b', font:{size:9}, callback: v => 'R$' + (v>=1000?(v/1000).toFixed(0)+'k':v.toFixed(0)) }, grid:{ color:'rgba(148,163,184,0.07)' } },
+              x: { ticks: { color:'#94a3b8', font:{size:9} }, grid:{ display:false } }
             }
           }
         });
