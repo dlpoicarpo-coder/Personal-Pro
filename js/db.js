@@ -170,6 +170,9 @@ class Database {
 
   // ── SEED INITIAL TEMPLATES ──
   async seedTemplates() {
+    // Sempre verificar métodos independente do seed de exercícios
+    await this.seedMethods();
+
     const exercisesCount = await this.count('exercises');
     if (exercisesCount < 80) {
       const exercises = [
@@ -307,50 +310,7 @@ class Database {
         { name: 'Abertura de Quadril com Haltere', muscleGroup: 'Glúteos',       category: 'Mobilidade', equipment: 'Halteres',       loadType: 'weight',     description: 'Fortalecimento e mobilidade do glúteo médio.' },
       ];
 
-      // Métodos de intensificação
-      const methods = [
-        // Força / Hipertrofia
-        { name: 'Drop-set',       category: 'Hipertrofia', description: 'Executar até a falha, reduzir carga ~20% e continuar sem descanso. Repetir 2-3x.', sets: '3+drops', repsHint: '8-12 + drops', restHint: '120-180s entre drop-sets completos' },
-        { name: 'Pirâmide Crescente', category: 'Força',   description: 'Aumentar carga a cada série, reduzir reps: 12→10→8→6. Boa para progressão.', sets: '4', repsHint: '12→10→8→6', restHint: '90-120s' },
-        { name: 'Pirâmide Decrescente', category: 'Força', description: 'Iniciar pesado e reduzir carga a cada série: 6→8→10→12.', sets: '4', repsHint: '6→8→10→12', restHint: '90-120s' },
-        { name: 'Pirâmide Dupla',  category: 'Hipertrofia', description: 'Crescente depois decrescente: 12→10→8→10→12. Máximo volume.', sets: '5', repsHint: '12→10→8→10→12', restHint: '90s' },
-        { name: 'Rest-Pause',      category: 'Força',       description: 'Executar até a falha, descanso de 15-20s, continuar até nova falha. 2-3 mini-séries.', sets: '1-3', repsHint: 'Até a falha + pausa', restHint: '15-20s entre mini-séries' },
-        { name: 'Super-série Agonista', category: 'Hipertrofia', description: 'Dois exercícios do mesmo grupo muscular sem descanso. Ex: Supino + Crucifixo.', sets: '3', repsHint: '10-12 cada', restHint: '90s após o par' },
-        { name: 'Super-série Antagonista', category: 'Hipertrofia', description: 'Dois exercícios de grupos opostos sem descanso. Ex: Rosca + Tríceps.', sets: '3', repsHint: '10-12 cada', restHint: '60s após o par' },
-        { name: 'Tri-set',         category: 'Hipertrofia', description: 'Três exercícios consecutivos sem descanso. Alto estímulo metabólico.', sets: '3', repsHint: '8-12 cada', restHint: '120s após o tri' },
-        { name: 'Série Gigante',   category: 'Hipertrofia', description: '4+ exercícios consecutivos. Máximo estímulo. Reduzir cargas.', sets: '3', repsHint: '10-15 cada', restHint: '180s após o set' },
-        { name: 'Cluster',         category: 'Força',       description: 'Carga 85-95% 1RM. Execução: 2-3 reps, pausa 10-15s, repetir até 5 cluster. Força máxima.', sets: '5', repsHint: '2-3 por cluster', restHint: '10-15s entre clusters; 3-5min entre sets' },
-        { name: 'Excêntrico Acentuado', category: 'Hipertrofia', description: 'Fase excêntrica 4-6 segundos. Provoca mais dano muscular e hipertrofia.', sets: '3-4', repsHint: '6-8', restHint: '120s' },
-        { name: 'Isometria',       category: 'Força',       description: 'Sustentação em posição de tensão por 30-60s. Boa para estabilização.', sets: '3', repsHint: '30-60s', restHint: '90s' },
-        { name: 'Pré-exaustão',    category: 'Hipertrofia', description: 'Isolamento antes do composto. Ex: Crucifixo → Supino. Fatiga o músculo-alvo primeiro.', sets: '3', repsHint: '12 iso + 8-10 composto', restHint: '0s entre, 120s entre séries' },
-        { name: 'Bi-set',          category: 'Hipertrofia', description: 'Dois exercícios para o mesmo músculo, sem pausa. Similar ao super-set agonista.', sets: '3-4', repsHint: '10 cada', restHint: '90s após o par' },
-        { name: '21s',             category: 'Hipertrofia', description: '7 reps parciais (0-90°) + 7 reps parciais (90-180°) + 7 reps completas = 21. Para bíceps.', sets: '3', repsHint: '21 (7+7+7)', restHint: '90-120s' },
-        { name: 'Stripping',       category: 'Hipertrofia', description: 'Similar ao drop-set com barra: remover anilhas nos dois lados sem parar.', sets: '1 longa', repsHint: 'Até a falha com cada carga', restHint: '120-180s' },
-        { name: 'FST-7',           category: 'Hipertrofia', description: 'Fascia Stretch Training: 7 séries do exercício isolador com 30-45s descanso. Alta congestão.', sets: '7', repsHint: '12-15', restHint: '30-45s' },
-        // Cardio / Endurance
-        { name: 'Zona 1 (Z1)',     category: 'Cardio',      description: 'Intensidade muito leve. <65% FC Máx. Recuperação ativa, base aeróbica.', sets: '1', repsHint: '20-60min contínuo', restHint: 'Sem descanso' },
-        { name: 'Zona 2 (Z2)',     category: 'Cardio',      description: '65-75% FC Máx. Base aeróbica. Pode falar em frases. Longo e lento.', sets: '1', repsHint: '30-90min contínuo', restHint: 'Sem descanso' },
-        { name: 'Zona 3 (Z3)',     category: 'Cardio',      description: '75-80% FC Máx. Limiar aeróbico inferior. Confortavelmente difícil.', sets: '1', repsHint: '20-40min', restHint: 'Sem descanso' },
-        { name: 'Zona 4 (Z4) — Limiar', category: 'Cardio', description: '80-90% FC Máx. Limiar anaeróbio. Difícil de sustentar >20min.', sets: '1-3', repsHint: '10-20min', restHint: '5min recuperação ativa entre blocos' },
-        { name: 'Zona 5 (Z5) — VO2max', category: 'Cardio', description: '90-100% FC Máx. Intervalos curtos. Melhora VO2max.', sets: '4-8', repsHint: '3-5min esforço', restHint: '3-5min recuperação' },
-        { name: 'Tabata',          category: 'Cardio',      description: '20s máximo / 10s repouso × 8 rounds = 4min. Intensidade 170%+ VO2max.', sets: '1-3 blocos', repsHint: '20s esforço / 10s repouso', restHint: '60-90s entre blocos Tabata' },
-        { name: 'HIIT 1:2',        category: 'Cardio',      description: 'Ratio 1:2 trabalho:descanso. Ex: 30s esforço / 60s recuperação. 8-12 rounds.', sets: '8-12', repsHint: '30s esforço', restHint: '60s recuperação ativa' },
-        { name: 'HIIT 1:1',        category: 'Cardio',      description: 'Ratio 1:1. Ex: 30s esforço / 30s recuperação. Mais intenso.', sets: '8-12', repsHint: '30s esforço', restHint: '30s recuperação ativa' },
-        { name: 'SIT (Sprint Interval Training)', category: 'Cardio', description: 'Sprints de 10-30s máximos. 4-6 repetições. Melhora potência anaeróbica.', sets: '4-6', repsHint: '10-30s sprint', restHint: '2-4min recuperação completa' },
-        { name: 'Série de Repetição (VO2max)', category: 'Cardio', description: 'Intervalos de 3-5min a 95-100% VO2max. Base da periodização de atletas.', sets: '4-6', repsHint: '3-5min', restHint: 'Igual ao esforço' },
-        { name: 'Steady State',    category: 'Cardio',      description: 'Ritmo constante e moderado durante todo o tempo. Zona 2-3. Base aeróbica.', sets: '1', repsHint: '20-60min', restHint: 'Sem descanso' },
-        { name: 'Progressivo',     category: 'Cardio',      description: 'Aumentar velocidade/intensidade a cada bloco de tempo. Ex: +0.5km/h a cada 5min.', sets: '1', repsHint: 'Progressivo', restHint: 'Sem descanso' },
-      ];
-
-      // Salvar métodos se não existirem
-      const existingMethods = await this.getAll('methods');
-      const existingMethodNames = new Set(existingMethods.map(m => m.name));
-      for (const m of methods) {
-        if (!existingMethodNames.has(m.name)) {
-          await this.add('methods', m);
-        }
-      }
-
+      // Salvar métodos — delegado para seedMethods() que já rodou antes
       // Adicionar apenas exercícios que não existem ainda
       const existing = await this.getAll('exercises');
       const existingNames = new Set(existing.map(e => e.name.toLowerCase()));
@@ -358,6 +318,50 @@ class Database {
         if (!existingNames.has(ex.name.toLowerCase())) {
           await this.add('exercises', ex);
         }
+      }
+    }
+  }
+
+  // ── SEED MÉTODOS (sempre verifica, independente do seed de exercícios) ──
+  async seedMethods() {
+    const methods = [
+      // Força / Hipertrofia
+      { name: 'Drop-set',       category: 'Hipertrofia', description: 'Executar até a falha, reduzir carga ~20% e continuar sem descanso. Repetir 2-3x.', sets: '3+drops', repsHint: '8-12 + drops', restHint: '120-180s entre drop-sets completos' },
+      { name: 'Pirâmide Crescente', category: 'Força',   description: 'Aumentar carga a cada série, reduzir reps: 12→10→8→6.', sets: '4', repsHint: '12→10→8→6', restHint: '90-120s' },
+      { name: 'Pirâmide Decrescente', category: 'Força', description: 'Iniciar pesado e reduzir carga a cada série: 6→8→10→12.', sets: '4', repsHint: '6→8→10→12', restHint: '90-120s' },
+      { name: 'Pirâmide Dupla',  category: 'Hipertrofia', description: 'Crescente depois decrescente: 12→10→8→10→12. Máximo volume.', sets: '5', repsHint: '12→10→8→10→12', restHint: '90s' },
+      { name: 'Rest-Pause',      category: 'Força',       description: 'Executar até a falha, descanso de 15-20s, continuar até nova falha. 2-3 mini-séries.', sets: '1-3', repsHint: 'Até a falha + pausa', restHint: '15-20s entre mini-séries' },
+      { name: 'Super-série Agonista', category: 'Hipertrofia', description: 'Dois exercícios do mesmo grupo muscular sem descanso. Ex: Supino + Crucifixo.', sets: '3', repsHint: '10-12 cada', restHint: '90s após o par' },
+      { name: 'Super-série Antagonista', category: 'Hipertrofia', description: 'Dois exercícios de grupos opostos sem descanso. Ex: Rosca + Tríceps.', sets: '3', repsHint: '10-12 cada', restHint: '60s após o par' },
+      { name: 'Tri-set',         category: 'Hipertrofia', description: 'Três exercícios consecutivos sem descanso. Alto estímulo metabólico.', sets: '3', repsHint: '8-12 cada', restHint: '120s após o tri' },
+      { name: 'Série Gigante',   category: 'Hipertrofia', description: '4+ exercícios consecutivos. Máximo estímulo. Reduzir cargas.', sets: '3', repsHint: '10-15 cada', restHint: '180s após o set' },
+      { name: 'Cluster',         category: 'Força',       description: 'Carga 85-95% 1RM. Execução: 2-3 reps, pausa 10-15s, repetir até 5 cluster. Força máxima.', sets: '5', repsHint: '2-3 por cluster', restHint: '10-15s entre clusters; 3-5min entre sets' },
+      { name: 'Excêntrico Acentuado', category: 'Hipertrofia', description: 'Fase excêntrica 4-6 segundos. Provoca mais dano muscular e hipertrofia.', sets: '3-4', repsHint: '6-8', restHint: '120s' },
+      { name: 'Isometria',       category: 'Força',       description: 'Sustentação em posição de tensão por 30-60s. Boa para estabilização.', sets: '3', repsHint: '30-60s', restHint: '90s' },
+      { name: 'Pré-exaustão',    category: 'Hipertrofia', description: 'Isolamento antes do composto. Ex: Crucifixo → Supino. Fatiga o músculo-alvo primeiro.', sets: '3', repsHint: '12 iso + 8-10 composto', restHint: '0s entre, 120s entre séries' },
+      { name: 'Bi-set',          category: 'Hipertrofia', description: 'Dois exercícios para o mesmo músculo, sem pausa.', sets: '3-4', repsHint: '10 cada', restHint: '90s após o par' },
+      { name: '21s',             category: 'Hipertrofia', description: '7 reps parciais (0-90°) + 7 reps parciais (90-180°) + 7 reps completas = 21.', sets: '3', repsHint: '21 (7+7+7)', restHint: '90-120s' },
+      { name: 'Stripping',       category: 'Hipertrofia', description: 'Similar ao drop-set com barra: remover anilhas sem parar.', sets: '1 longa', repsHint: 'Até a falha com cada carga', restHint: '120-180s' },
+      { name: 'FST-7',           category: 'Hipertrofia', description: '7 séries do exercício isolador com 30-45s descanso. Alta congestão.', sets: '7', repsHint: '12-15', restHint: '30-45s' },
+      // Cardio / Endurance
+      { name: 'Zona 1 (Z1)',     category: 'Cardio',      description: '<65% FC Máx. Recuperação ativa, base aeróbica.', sets: '1', repsHint: '20-60min contínuo', restHint: 'Sem descanso' },
+      { name: 'Zona 2 (Z2)',     category: 'Cardio',      description: '65-75% FC Máx. Base aeróbica. Longo e lento.', sets: '1', repsHint: '30-90min contínuo', restHint: 'Sem descanso' },
+      { name: 'Zona 3 (Z3)',     category: 'Cardio',      description: '75-80% FC Máx. Limiar aeróbico inferior.', sets: '1', repsHint: '20-40min', restHint: 'Sem descanso' },
+      { name: 'Zona 4 (Z4) — Limiar', category: 'Cardio', description: '80-90% FC Máx. Limiar anaeróbio.', sets: '1-3', repsHint: '10-20min', restHint: '5min recuperação ativa entre blocos' },
+      { name: 'Zona 5 (Z5) — VO2max', category: 'Cardio', description: '90-100% FC Máx. Intervalos curtos. Melhora VO2max.', sets: '4-8', repsHint: '3-5min esforço', restHint: '3-5min recuperação' },
+      { name: 'Tabata',          category: 'Cardio',      description: '20s máximo / 10s repouso × 8 rounds = 4min.', sets: '1-3 blocos', repsHint: '20s esforço / 10s repouso', restHint: '60-90s entre blocos' },
+      { name: 'HIIT 1:2',        category: 'Cardio',      description: 'Ratio 1:2 trabalho:descanso. 30s esforço / 60s recuperação. 8-12 rounds.', sets: '8-12', repsHint: '30s esforço', restHint: '60s recuperação ativa' },
+      { name: 'HIIT 1:1',        category: 'Cardio',      description: 'Ratio 1:1. 30s esforço / 30s recuperação. Mais intenso.', sets: '8-12', repsHint: '30s esforço', restHint: '30s recuperação ativa' },
+      { name: 'SIT (Sprint Interval Training)', category: 'Cardio', description: 'Sprints de 10-30s máximos. Melhora potência anaeróbica.', sets: '4-6', repsHint: '10-30s sprint', restHint: '2-4min recuperação completa' },
+      { name: 'Série de Repetição (VO2max)', category: 'Cardio', description: 'Intervalos de 3-5min a 95-100% VO2max.', sets: '4-6', repsHint: '3-5min', restHint: 'Igual ao esforço' },
+      { name: 'Steady State',    category: 'Cardio',      description: 'Ritmo constante e moderado. Zona 2-3. Base aeróbica.', sets: '1', repsHint: '20-60min', restHint: 'Sem descanso' },
+      { name: 'Progressivo',     category: 'Cardio',      description: 'Aumentar velocidade/intensidade a cada bloco. Ex: +0.5km/h a cada 5min.', sets: '1', repsHint: 'Progressivo', restHint: 'Sem descanso' },
+    ];
+    const existing = await this.getAll('methods');
+    const existingNames = new Set(existing.map(m => m.name));
+    for (const m of methods) {
+      if (!existingNames.has(m.name)) {
+        await this.add('methods', m);
       }
     }
   }
