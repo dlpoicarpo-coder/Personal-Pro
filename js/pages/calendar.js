@@ -148,7 +148,7 @@ async function buildCalendarHTML() {
             <td>${ev.time || '—'}</td>
             <td>
               <div class="flex items-center gap-sm">
-                <div class="avatar avatar-sm" style="width:24px;height:24px;font-size:0.65rem">${st ? st.name[0] : '?'}</div>
+                <div class="avatar avatar-sm" style="width:24px;height:24px;font-size:0.65rem">${st ? st.name.split(' ').filter(Boolean).map(n=>n[0]).slice(0,2).join('').toUpperCase() : '?'}</div>
                 ${st?.name || '?'}
               </div>
             </td>
@@ -192,7 +192,7 @@ function renderDayEvents(dayEvents, students, statusColors, statusLabels) {
       opacity:${missed ? 0.85 : 1}">
       <div class="flex items-center justify-between mb-sm">
         <div class="flex items-center gap-sm">
-          <div class="avatar avatar-sm">${st ? st.name[0] : '?'}</div>
+          <div class="avatar avatar-sm">${st ? st.name.split(' ').filter(Boolean).map(n=>n[0]).slice(0,2).join('').toUpperCase() : '?'}</div>
           <div>
             <div style="font-weight:600;font-size:0.9rem">${st?.name || '?'}</div>
             <div class="text-xs text-muted">${ev.time || '—'} · ${ev.duration || 60}min</div>
