@@ -79,19 +79,48 @@ async function renderStudentReport(studentId, cycleFilter = '') {
   if (sleepNum < 6) parecerTecnico += 'Sono comprometido — orientar higiene do sono. ';
   if (totalLoad > 2000) parecerTecnico += 'Carga acumulada significativa. Monitorar sinais de overreaching.';
 
-  // Workout summary for the cycle
-  const workoutSummary = workouts.map(w => {
-    const exCount = (w.exercises || []).length;
-    return `<div class="event-card mb-sm">
-      <div class="flex items-center justify-between">
-        <div><strong>${w.name}</strong> <span class="text-muted text-xs">${w.cycle || ''}</span></div>
-        <span class="badge badge-info">${exCount} exercícios</span>
-      </div>
-      <div class="text-xs text-muted mt-xs">${Calc.formatDate(w.date)}</div>
-      ${(w.exercises || []).slice(0, 4).map(e => `<span class="text-xs" style="margin-right:8px">${e.name} (${e.sets}×${e.reps})</span>`).join('')}
-      ${exCount > 4 ? `<span class="text-xs text-muted">+${exCount - 4} mais</span>` : ''}
-    </div>`;
-  }).join('');
+  // ── Evolução de carga por exercício (baseado nas sessões) ──
+  const loadProgression = {};
+  completed
+    .sort((a, b) => new Date(a.date) - new Date(b.date))
+    .forEach(s => {
+      (s.setLog || []).forEach(set => {
+        const exName = (s.exercises || [])[set.exIdx]?.name;
+        if (!exName || !set.load || set.load <= 0) return;
+        if (!loadProgression[exName]) loadProgression[exName] = [];
+        loadProgression[exName].push({
+          date: s.date,
+          load: set.load,
+          reps: set.reps || 0,
+          vol:  set.load * (set.reps || 1),
+        });
+      });
+    });
+
+  // Top exercícios com maior progressão de carga
+  const progressionItems = Object.entries(loadProgression)
+    .filter(([, sets]) => sets.length >= 2)
+    .map(([name, sets]) => {
+      const first     = sets[0];
+      const last      = sets[sets.length - 1];
+      const maxLoad   = Math.max(...sets.map(s => s.load));
+      const minLoad   = Math.min(...sets.map(s => s.load));
+      const delta     = last.load - first.load;
+      const pct       = first.load > 0 ? Math.round((delta / first.load) * 100) : 0;
+      const totalVol  = sets.reduce((t, s) => t + s.vol, 0);
+      const avgReps   = Math.round(sets.reduce((t, s) => t + s.reps, 0) / sets.length);
+      return { name, first, last, maxLoad, minLoad, delta, pct, totalVol, avgReps, sessions: sets.length };
+    })
+    .sort((a, b) => Math.abs(b.pct) - Math.abs(a.pct))
+    .slice(0, 8);
+
+  // Stats gerais de carga
+  const totalVolAllSessions = completed.reduce((t, s) => t + Math.round(s.totalVolume || 0), 0);
+  const avgVolPerSession    = completed.length ? Math.round(totalVolAllSessions / completed.length) : 0;
+  const maxVolSession       = completed.length ? Math.max(...completed.map(s => Math.round(s.totalVolume || 0))) : 0;
+  const avgDuration         = completed.length ? Math.round(completed.reduce((t, s) => t + (s.totalDuration || 0), 0) / completed.length / 60) : 0;
+
+  const workoutSummary = ''; // mantido por compatibilidade
 
   return `
     <div id="pdfArea">
@@ -104,16 +133,17 @@ async function renderStudentReport(studentId, cycleFilter = '') {
       </div>
     </div>
 
+    <!-- Stats principais -->
     <div class="stats-grid mb-lg" style="grid-template-columns:repeat(5,1fr)">
       <div class="stat-card">
-        <div class="stat-label">Treinos Prescritos</div>
-        <div class="stat-value text-gradient">${workouts.length}</div>
-        <div class="text-xs text-muted" style="margin-top:4px">Fichas criadas para o aluno</div>
+        <div class="stat-label">Sessões</div>
+        <div class="stat-value text-gradient">${completed.length}</div>
+        <div class="text-xs text-muted" style="margin-top:4px">realizadas</div>
       </div>
       <div class="stat-card">
-        <div class="stat-label">Sessões Realizadas</div>
-        <div class="stat-value text-gradient">${completed.length}</div>
-        <div class="text-xs text-muted" style="margin-top:4px">Treinos efetivamente feitos</div>
+        <div class="stat-label">Volume Total</div>
+        <div class="stat-value text-gradient">${(totalVolAllSessions/1000).toFixed(1)}t</div>
+        <div class="text-xs text-muted" style="margin-top:4px">${totalVolAllSessions.toLocaleString('pt-BR')} kg</div>
       </div>
       <div class="stat-card">
         <div class="stat-label">PSE Média</div>
@@ -127,23 +157,98 @@ async function renderStudentReport(studentId, cycleFilter = '') {
       </div>
       <div class="stat-card">
         <div class="stat-label">Carga Total</div>
-        <div class="stat-value text-gradient">${totalLoad}</div>
-        <div class="text-xs text-muted" style="margin-top:4px">PSE × Duração acumulada</div>
+        <div class="stat-value text-gradient">${Math.round(totalLoad)}</div>
+        <div class="text-xs text-muted" style="margin-top:4px">PSE × duração</div>
+      </div>
+    </div>
+
+    <!-- Sub-stats de treino -->
+    <div class="stats-grid mb-lg" style="grid-template-columns:repeat(3,1fr)">
+      <div class="stat-card" style="padding:12px;text-align:center">
+        <div class="stat-label" style="font-size:0.65rem">Média/Sessão</div>
+        <div class="stat-value" style="font-size:1.3rem;color:var(--accent)">${avgVolPerSession.toLocaleString('pt-BR')} kg</div>
+        <div class="text-xs text-muted" style="margin-top:2px">volume por treino</div>
+      </div>
+      <div class="stat-card" style="padding:12px;text-align:center">
+        <div class="stat-label" style="font-size:0.65rem">Maior Volume</div>
+        <div class="stat-value" style="font-size:1.3rem;color:var(--warning)">${maxVolSession.toLocaleString('pt-BR')} kg</div>
+        <div class="text-xs text-muted" style="margin-top:2px">em uma sessão</div>
+      </div>
+      <div class="stat-card" style="padding:12px;text-align:center">
+        <div class="stat-label" style="font-size:0.65rem">Duração Média</div>
+        <div class="stat-value" style="font-size:1.3rem;color:var(--primary)">${avgDuration} min</div>
+        <div class="text-xs text-muted" style="margin-top:2px">por sessão</div>
       </div>
     </div>
 
     <div class="card mb-lg" style="border-left:3px solid var(--primary);background:rgba(16,185,129,0.03)">
       <div class="card-header"><span class="card-title">Resumo para o Aluno</span></div>
-      <p class="text-xs text-muted" style="margin-bottom:8px">Este texto é escrito em linguagem acessível para que o aluno compreenda seu progresso.</p>
+      <p class="text-xs text-muted" style="margin-bottom:8px">Análise em linguagem acessível.</p>
       <p class="text-sm" style="line-height:1.8">${parecerAluno}</p>
     </div>
 
     <div class="card mb-lg" style="border-left:3px solid var(--accent)">
       <div class="card-header"><span class="card-title">Análise Técnica do Treinador</span></div>
-      <p class="text-xs text-muted" style="margin-bottom:8px">Análise com base nos dados coletados e indicadores de carga de treino.</p>
+      <p class="text-xs text-muted" style="margin-bottom:8px">Baseada nos indicadores de carga e bem-estar.</p>
       <p class="text-sm" style="line-height:1.7">${parecerTecnico}</p>
     </div>
 
+    <!-- Progressão de carga por exercício -->
+    ${progressionItems.length ? `
+    <div class="card mb-lg">
+      <div class="card-header">
+        <span class="card-title">Progressão de Carga por Exercício</span>
+        <span class="text-xs text-muted">${progressionItems.length} exercícios com dados suficientes</span>
+      </div>
+      <p class="text-xs text-muted mb-md">Evolução da carga utilizada ao longo das sessões registradas. Verde = progresso, vermelho = regressão.</p>
+      <div class="table-container">
+        <table class="data-table">
+          <thead><tr>
+            <th>Exercício</th>
+            <th style="text-align:center">1ª Carga</th>
+            <th style="text-align:center">Última Carga</th>
+            <th style="text-align:center">Máximo</th>
+            <th style="text-align:center">Δ Carga</th>
+            <th style="text-align:center">Evolução</th>
+            <th style="text-align:center">Vol. Total</th>
+            <th style="text-align:center">Séries</th>
+          </tr></thead>
+          <tbody>
+            ${progressionItems.map(p => {
+              const deltaColor = p.delta > 0 ? 'var(--success)' : p.delta < 0 ? 'var(--danger)' : 'var(--text-muted)';
+              const arrow      = p.delta > 0 ? '↑' : p.delta < 0 ? '↓' : '=';
+              const barWidth   = Math.min(100, Math.abs(p.pct));
+              return `<tr>
+                <td><strong style="font-size:0.85rem">${p.name}</strong></td>
+                <td style="text-align:center;color:var(--text-muted)">${p.first.load}kg</td>
+                <td style="text-align:center;font-weight:600">${p.last.load}kg</td>
+                <td style="text-align:center;color:var(--warning);font-weight:600">${p.maxLoad}kg</td>
+                <td style="text-align:center;color:${deltaColor};font-weight:700">
+                  ${p.delta > 0 ? '+' : ''}${p.delta}kg
+                </td>
+                <td style="text-align:center;min-width:100px">
+                  <div style="display:flex;align-items:center;gap:6px;justify-content:center">
+                    <div style="width:60px;height:6px;background:var(--border-color);border-radius:3px;overflow:hidden">
+                      <div style="height:100%;width:${barWidth}%;background:${deltaColor};border-radius:3px"></div>
+                    </div>
+                    <span style="color:${deltaColor};font-weight:700;font-size:0.8rem">${arrow} ${Math.abs(p.pct)}%</span>
+                  </div>
+                </td>
+                <td style="text-align:center;font-size:0.82rem">${(p.totalVol/1000).toFixed(1)}t</td>
+                <td style="text-align:center;color:var(--text-muted);font-size:0.82rem">${p.sessions}</td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+      <div class="mt-sm" style="height:200px;position:relative">
+        <canvas id="loadProgressChart"></canvas>
+      </div>
+    </div>` : `
+    <div class="card mb-lg">
+      <div class="card-header"><span class="card-title">Progressão de Carga</span></div>
+      <p class="text-muted text-sm" style="padding:16px 0">Sem sessões registradas com setLog suficiente para análise de progressão. Registre sessões via Treino ao Vivo para ver a evolução.</p>
+    </div>`}
 
     <div class="card mb-lg" style="border-left:3px solid var(--accent)">
       <div class="card-header"><span class="card-title">Periodização Atual</span></div>
@@ -480,7 +585,7 @@ export async function initReports(navigateFn) {
 
       ${sessions.length ? `
       <h2>Sessões Realizadas</h2>
-      <p class="section-desc">Registro das ${sessions.length} sessão(ões) concluída(s).</p>
+      <p class="section-desc">${sessions.length} sessão(ões) · Volume total: ${totalVol.toLocaleString('pt-BR')} kg · Média/sessão: ${avgVolPerSession.toLocaleString('pt-BR')} kg · Duração média: ${avgDuration}min</p>
       <table>
         <thead><tr><th>Data</th><th>Treino</th><th>Duração</th><th>Volume</th><th>Séries</th><th>PSE</th></tr></thead>
         <tbody>
@@ -496,25 +601,24 @@ export async function initReports(navigateFn) {
         </tbody>
       </table>` : ''}
 
-      ${uniqueWorkouts.length ? `
-      <h2>Treinos Prescritos</h2>
-      <p class="section-desc">Fichas de treino criadas pelo seu personal trainer (${uniqueWorkouts.length} treino${uniqueWorkouts.length>1?'s únicos':' único'}).</p>
-      ${Object.entries(byCycle).map(([cycle, wks])=>`
-        <div class="cycle-section">
-          <div class="cycle-title">${cycle} <span class="cycle-count">(${wks.length} treino${wks.length>1?'s':''})</span></div>
-          <table>
-            <thead><tr><th>Treino</th><th>Data</th><th>Exercícios</th></tr></thead>
-            <tbody>
-              ${wks.sort((a,b)=>new Date(a.date)-new Date(b.date)).map(w=>`
-                <tr>
-                  <td><strong>${w.name}</strong></td>
-                  <td>${new Date(w.date).toLocaleDateString('pt-BR')}</td>
-                  <td style="text-align:center"><span class="tag-badge">${(w.exercises||[]).length}</span></td>
-                </tr>`).join('')}
-            </tbody>
-          </table>
-        </div>`).join('')}
-      <p class="footnote">* Fichas completas com exercícios, séries e cargas disponíveis no app Personal PRO.</p>` : ''}
+      ${progressionItems.length ? `
+      <h2>Progressão de Carga por Exercício</h2>
+      <p class="section-desc">Evolução da carga registrada ao longo das sessões. A sobrecarga progressiva é o principal motor do ganho de força e hipertrofia.</p>
+      <table>
+        <thead><tr><th>Exercício</th><th>1ª Carga</th><th>Última Carga</th><th>Máximo</th><th>Δ Carga</th><th>Evolução</th><th>Vol. Total</th></tr></thead>
+        <tbody>
+          ${progressionItems.map(p=>`
+            <tr>
+              <td><strong>${p.name}</strong></td>
+              <td style="color:#888">${p.first.load}kg</td>
+              <td style="font-weight:700">${p.last.load}kg</td>
+              <td style="color:#f59e0b;font-weight:600">${p.maxLoad}kg</td>
+              <td style="color:${p.delta>=0?'#10b981':'#ef4444'};font-weight:700">${p.delta>0?'+':''}${p.delta}kg</td>
+              <td style="color:${p.delta>=0?'#10b981':'#ef4444'};font-weight:700">${p.delta>0?'↑':'↓'} ${Math.abs(p.pct)}%</td>
+              <td style="color:#666">${(p.totalVol/1000).toFixed(1)}t</td>
+            </tr>`).join('')}
+        </tbody>
+      </table>` : ''}
 
       ${chartsHTML ? `
       <h2>Gráficos de Evolução</h2>
@@ -615,7 +719,52 @@ async function initReportCharts(studentId) {
     if (ds.length) new Chart(mCtx, { type: 'line', data: { labels: sorted.map(a => Calc.formatDate(a.date)), datasets: ds }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { color: '#94a3b8' } } }, scales: { y: { position: 'left', ticks: { color: '#10b981' }, grid: { color: 'rgba(255,255,255,0.05)' } }, y1: { position: 'right', ticks: { color: '#f59e0b' }, grid: { display: false } }, x: { ticks: { color: '#94a3b8' }, grid: { display: false } } } } });
   }
 
-  // ── CYCLE COMPARISON CHART ──
+  // ── GRÁFICO DE PROGRESSÃO DE CARGA ──
+  const lpCtx = document.getElementById('loadProgressChart');
+  if (lpCtx && sessions.length >= 2) {
+    // Pegar os top 3 exercícios mais treinados para o gráfico de linha
+    const logMap = {};
+    [...sessions].filter(s=>s.status==='completed').sort((a,b)=>new Date(a.date)-new Date(b.date)).forEach(s => {
+      (s.setLog||[]).forEach(set => {
+        const name = (s.exercises||[])[set.exIdx]?.name;
+        if (!name || !set.load || set.load<=0) return;
+        if (!logMap[name]) logMap[name] = [];
+        logMap[name].push({ date: s.date, load: set.load });
+      });
+    });
+    const top3 = Object.entries(logMap)
+      .filter(([,v])=>v.length>=2)
+      .sort((a,b)=>b[1].length-a[1].length)
+      .slice(0,3);
+
+    if (top3.length) {
+      const colors = ['#10b981','#06b6d4','#f59e0b'];
+      new Chart(lpCtx, {
+        type: 'line',
+        data: {
+          datasets: top3.map(([name, points], i) => ({
+            label: name,
+            data: points.map(p => ({ x: p.date, y: p.load })),
+            borderColor: colors[i],
+            backgroundColor: colors[i]+'15',
+            tension: 0.3,
+            pointRadius: 4,
+            borderWidth: 2,
+            fill: false,
+          }))
+        },
+        options: {
+          ...co,
+          parsing: false,
+          scales: {
+            x: { type:'time', time:{ unit:'day', displayFormats:{ day:'dd/MM' } }, ticks:{ color:'#94a3b8', font:{size:9} }, grid:{display:false} },
+            y: { ticks:{ color:'#64748b', font:{size:9}, callback: v => v+'kg' }, grid:{ color:'rgba(148,163,184,0.07)' } }
+          },
+          plugins: { legend: { labels:{ color:'#94a3b8', font:{size:10}, boxWidth:12 } } }
+        }
+      });
+    }
+  }
   const cdCtx = document.getElementById('cycleDiffChart');
   if (cdCtx && bf.length >= 4) {
     const mid = Math.floor(bf.length / 2);
