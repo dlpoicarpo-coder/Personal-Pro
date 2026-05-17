@@ -411,14 +411,17 @@ export async function initReports(navigateFn) {
     const bf          = (await db.getAll('biofeedback')).filter(b => b.studentId === sid);
     const assessments = (await db.getAll('assessments')).filter(a => a.studentId === sid);
 
-    // ── Stats ──
+   // ── Stats ──
     const recent10  = bf.slice(-10);
     const avgPse    = recent10.length ? (recent10.reduce((t,b)=>t+(b.pse||0),0)/recent10.length).toFixed(1) : '-';
     const avgSleep  = recent10.length ? (recent10.reduce((t,b)=>t+(b.sleep||0),0)/recent10.length).toFixed(1) : '-';
     const avgDisp   = recent10.length ? (recent10.reduce((t,b)=>t+(b.mood||0),0)/recent10.length).toFixed(1) : '-';
     const totalLoad = bf.reduce((t,b)=>t+(b.trainingLoad||0),0);
     const totalVol  = sessions.reduce((t,s)=>t+Math.round(s.totalVolume||0),0);
-
+    
+    // Adicionando as variáveis que faltavam para o PDF:
+    const avgVolPerSession = sessions.length ? Math.round(totalVol / sessions.length) : 0;
+    const avgDuration = sessions.length ? Math.round(sessions.reduce((t, s) => t + (s.totalDuration || 0), 0) / sessions.length / 60) : 0;
     // ── Resumo de treinos — deduplica por nome+ciclo, mostra só únicas ──
     const uniqueWorkouts = [];
     const seen = new Set();
