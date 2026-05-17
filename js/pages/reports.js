@@ -341,7 +341,6 @@ async function renderStudentReport(studentId, cycleFilter = '') {
     </div>
     </div>
   `;
-} // <--- É ESTA CHAVE AQUI QUE DEVE ESTAR FALTANDO!
 
 export async function initReports(navigateFn) {
   const pdfBtn = document.getElementById('exportPdfBtn');
