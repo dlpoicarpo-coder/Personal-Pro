@@ -482,11 +482,8 @@ export async function initReports(navigateFn) {
       } catch(e) { /* canvas vazio ou sem dados */ }
     });
 
-    // ── HTML do PDF ──
-    const printWin = window.open('', '_blank');
-    if (!printWin) { notify.error('Popup bloqueado. Permita pop-ups para gerar o PDF.'); return; }
-
-    printWin.document.write(`<!DOCTYPE html><html lang="pt-BR"><head>
+    // ── Gerar PDF via Blob URL (evita bloqueio de popup no Brave/Chrome) ──
+    const htmlContent = `<!DOCTYPE html><html lang="pt-BR"><head>
       <meta charset="UTF-8">
       <title>Dossiê — ${student.name}</title>
       <style>
@@ -551,6 +548,7 @@ export async function initReports(navigateFn) {
           .stat-val { font-size: 18px; }
         }
       </style>
+      <script>window.onload = function() { setTimeout(function() { window.print(); }, 600); }<\/script>
     </head><body>
 
       <div class="doc-header">
@@ -628,11 +626,19 @@ export async function initReports(navigateFn) {
       <div class="footer">
         Dossiê gerado por ${trainerName} — ${new Date().toLocaleDateString('pt-BR')} — Personal PRO · Sistema Profissional de Treinamento
       </div>
-    </body></html>`);
+    </body></html>`;
 
-    printWin.document.close();
-    setTimeout(() => { printWin.print(); }, 700);
-    notify.success('Dossiê gerado!');
+    const blob    = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+    const blobUrl = URL.createObjectURL(blob);
+    const tempLink = document.createElement('a');
+    tempLink.href   = blobUrl;
+    tempLink.target = '_blank';
+    tempLink.rel    = 'noopener noreferrer';
+    document.body.appendChild(tempLink);
+    tempLink.click();
+    document.body.removeChild(tempLink);
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 15000);
+    notify.success('PDF aberto! Use Ctrl+P (ou ⌘+P) para salvar.');
   });
 }
 
