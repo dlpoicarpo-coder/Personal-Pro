@@ -18,10 +18,14 @@ export async function renderReports() {
           <option value="">Selecione um aluno</option>
           ${active.map(s => `<option value="${s.id}">${s.name}</option>`).join('')}
         </select>
-        <select class="form-select" id="reportCycle" style="min-width:180px;display:none">
+        <select class="form-select" id="reportCycle" style="min-width:160px;display:none">
           <option value="">Todos os ciclos</option>
         </select>
-        <button class="btn btn-primary" id="exportPdfBtn" style="display:none">Gerar Dossiê PDF</button>
+        <button class="btn btn-secondary btn-sm" id="exportWaBtn" style="display:none;color:#25d366;border-color:#25d366">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:-2px;margin-right:4px"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+          Enviar
+        </button>
+        <button class="btn btn-primary btn-sm" id="exportPdfBtn" style="display:none">Gerar PDF</button>
       </div>
     </div>
     <div id="reportContent">
@@ -150,7 +154,7 @@ async function renderStudentReport(studentId, cycleFilter = '') {
     <div class="grid-2 mb-lg">
       <div class="card">
         <div class="card-header"><span class="card-title">Evolução do Bem-estar</span></div>
-        <p class="text-xs text-muted mb-sm">Gráfico de linhas mostrando as variáveis de bem-estar ao longo do tempo. <strong>Sono</strong> (roxo), <strong>Humor</strong> (verde), <strong>Energia</strong> (azul) e <strong>Estresse</strong> (amarelo tracejado). Valores acima de 7 indicam boa recuperação. Estresse abaixo de 5 é ideal.</p>
+        <p class="text-xs text-muted mb-sm">Gráfico de linhas mostrando as variáveis de bem-estar ao longo do tempo. <strong>Sono</strong> (roxo), <strong>Disposição</strong> (verde), <strong>Energia</strong> (azul) e <strong>Estresse</strong> (amarelo tracejado). Valores acima de 7 indicam boa recuperação. Estresse abaixo de 5 é ideal.</p>
         <div style="height:280px;position:relative"><canvas id="wellnessChart"></canvas></div>
       </div>
       <div class="card">
@@ -217,9 +221,11 @@ export async function initReports(navigateFn) {
     const content = document.getElementById('reportContent');
     if (pdfBtn) pdfBtn.style.display = sid ? '' : 'none';
     if (cycleSel) cycleSel.style.display = sid ? '' : 'none';
+    const waBtn = document.getElementById('exportWaBtn');
+    if (waBtn) waBtn.style.display = sid ? '' : 'none';
 
     if (!sid) {
-      content.innerHTML = '<div class="empty-state"><div class="empty-icon" style="font-size:2rem">—</div><h3>Selecione um aluno</h3></div>';
+      content.innerHTML = '<div class="empty-state"><div class="empty-icon">—</div><h3>Selecione um aluno</h3></div>';
       return;
     }
 
@@ -245,7 +251,42 @@ export async function initReports(navigateFn) {
     initReportCharts(sid);
   });
 
-  // PDF Export — Professional dossier
+  // WhatsApp — enviar resumo ao aluno
+  document.getElementById('exportWaBtn')?.addEventListener('click', async () => {
+    const sid = document.getElementById('reportStudent')?.value;
+    if (!sid) return;
+    const student  = await db.get('students', sid);
+    if (!student?.phone) { notify.warning('Aluno sem telefone cadastrado'); return; }
+    const sessions = (await db.getAll('sessions')).filter(s => s.studentId === sid && s.status === 'completed');
+    const bf       = (await db.getAll('biofeedback')).filter(b => b.studentId === sid);
+    const recent10 = bf.slice(-10);
+    const avgPse   = recent10.length ? (recent10.reduce((t,b)=>t+(b.pse||0),0)/recent10.length).toFixed(1) : '-';
+    const avgSleep = recent10.length ? (recent10.reduce((t,b)=>t+(b.sleep||0),0)/recent10.length).toFixed(1) : '-';
+    const totalVol = sessions.reduce((t,s)=>t+(s.totalVolume||0),0);
+    const cycleLabel = cycleSel?.value || 'Geral';
+    const msg = [
+      `📊 *Seu Relatório de Performance — Personal PRO*`,
+      ``,
+      `👤 Aluno: *${student.name}*`,
+      `📅 Ciclo: ${cycleLabel}`,
+      ``,
+      `🏋 *Treinos*`,
+      `• Sessões realizadas: ${sessions.length}`,
+      `• Volume total acumulado: ${totalVol}kg`,
+      ``,
+      `📈 *Indicadores (últimos ${recent10.length} check-ins)*`,
+      `• Sono médio: ${avgSleep}/10`,
+      `• PSE médio: ${avgPse}/10`,
+      ``,
+      `✅ Continue assim! Resultados consistentes vêm da consistência nos treinos e no descanso.`,
+      ``,
+      `_Relatório gerado pelo Personal PRO_`,
+    ].join('\n');
+    const phone = student.phone.replace(/\D/g,'');
+    window.open(`https://wa.me/${phone.startsWith('55')?phone:'55'+phone}?text=${encodeURIComponent(msg)}`, '_blank');
+  });
+
+  // PDF Export
   pdfBtn?.addEventListener('click', async () => {
     const sid = document.getElementById('reportStudent')?.value;
     if (!sid) return;
@@ -270,7 +311,7 @@ export async function initReports(navigateFn) {
     charts.forEach((c, i) => {
       const titles = ['Evolução do Bem-estar', 'Carga de Treino Semanal', 'PSE por Sessão', 'Radar de Wellness', 'Evolução de Medidas', 'Frequência Semanal'];
       const descs = [
-        'Sono (roxo), Humor (verde), Energia (azul), Estresse (amarelo). Valores acima de 7 indicam boa recuperação.',
+        'Sono (roxo), Disposição (verde), Energia (azul), Estresse (amarelo). Valores acima de 7 indicam boa recuperação.',
         'Volume de carga calculado como PSE × Duração. Aumentos graduais de ~10% por semana são ideais.',
         'Percepção Subjetiva de Esforço. Zona ideal para hipertrofia: 6-8. Acima de 8 por 3+ sessões = fadiga.',
         'Quanto mais expandido, melhor o estado geral. Áreas "encolhidas" indicam pontos de atenção.',
@@ -384,11 +425,11 @@ async function initReportCharts(studentId) {
   if (wCtx && bf.length > 1) {
     new Chart(wCtx, {
       type: 'line', data: {
-        labels: bf.map(b => Calc.formatDate(b.date)), datasets: [
-          { label: 'Sono', data: bf.map(b => b.sleep || 0), borderColor: '#8b5cf6', tension: 0.3 },
-          { label: 'Humor', data: bf.map(b => b.mood || 0), borderColor: '#10b981', tension: 0.3 },
-          { label: 'Energia', data: bf.map(b => b.energy || 0), borderColor: '#06b6d4', tension: 0.3 },
-          { label: 'Estresse', data: bf.map(b => b.stress || 0), borderColor: '#f59e0b', tension: 0.3, borderDash: [5, 5] },
+        labels: bf.map(b => Calc.formatDate(b.date).slice(0,5)), datasets: [
+          { label: 'Sono',        data: bf.map(b => b.sleep  || null), borderColor: '#8b5cf6', tension: 0.3, pointRadius: 3, borderWidth: 1.5, fill: false },
+          { label: 'Disposição',  data: bf.map(b => b.mood   || null), borderColor: '#10b981', tension: 0.3, pointRadius: 3, borderWidth: 1.5, fill: false },
+          { label: 'Energia',     data: bf.map(b => b.energy || null), borderColor: '#06b6d4', tension: 0.3, pointRadius: 3, borderWidth: 1.5, fill: false },
+          { label: 'Estresse',    data: bf.map(b => b.stress || null), borderColor: '#f59e0b', tension: 0.3, pointRadius: 3, borderWidth: 1.5, fill: false, borderDash: [5, 5] },
         ]
       }, options: { ...co, scales: { ...co.scales, y: { ...co.scales.y, min: 0, max: 10 } } }
     });
@@ -410,7 +451,10 @@ async function initReportCharts(studentId) {
   const rCtx = document.getElementById('radarChart');
   if (rCtx && bf.length > 0) {
     const l5 = bf.slice(-5); const avg = k => l5.reduce((s, b) => s + (b[k] || 0), 0) / l5.length;
-    new Chart(rCtx, { type: 'radar', data: { labels: ['Sono', 'Humor', 'Energia', 'Baixo Estresse', 'Sem Dor'], datasets: [{ label: 'Média', data: [avg('sleep'), avg('mood'), avg('energy'), 10 - avg('stress'), 10 - (avg('pain') || 0)], backgroundColor: 'rgba(16,185,129,0.2)', borderColor: '#10b981', pointBackgroundColor: '#10b981' }] }, options: { responsive: true, maintainAspectRatio: false, scales: { r: { min: 0, max: 10, ticks: { stepSize: 2, color: '#64748b', backdropColor: 'transparent' }, grid: { color: 'rgba(255,255,255,0.1)' }, pointLabels: { color: '#94a3b8', font: { size: 11 } } } }, plugins: { legend: { display: false } } } });
+    new Chart(rCtx, { type: 'radar', data: {
+      labels: ['Sono', 'Disposição', 'Energia', 'Baixo Estresse', 'Sem Dor'],
+      datasets: [{ label: 'Média (últimos 5)', data: [avg('sleep'), avg('mood'), avg('energy'), 10 - avg('stress'), 10 - (avg('pain') || 0)], backgroundColor: 'rgba(16,185,129,0.2)', borderColor: '#10b981', pointBackgroundColor: '#10b981' }]
+    }, options: { responsive: true, maintainAspectRatio: false, scales: { r: { min: 0, max: 10, ticks: { stepSize: 2, color: '#64748b', backdropColor: 'transparent' }, grid: { color: 'rgba(255,255,255,0.1)' }, pointLabels: { color: '#94a3b8', font: { size: 11 } } } }, plugins: { legend: { display: false } } } });
   }
 
   const fCtx = document.getElementById('freqChart');
@@ -438,7 +482,7 @@ async function initReportCharts(studentId) {
     const second = bf.slice(mid);
     const avgOf = (arr, key) => arr.length ? (arr.reduce((s, b) => s + (b[key] || 0), 0) / arr.length).toFixed(1) : 0;
     const metrics = ['sleep', 'mood', 'energy', 'stress', 'pse'];
-    const labels = ['Sono', 'Humor', 'Energia', 'Estresse', 'PSE'];
+    const labels  = ['Sono', 'Disposição', 'Energia', 'Estresse', 'PSE'];
     const firstData = metrics.map(k => parseFloat(avgOf(first, k)));
     const secondData = metrics.map(k => parseFloat(avgOf(second, k)));
 
