@@ -22,19 +22,18 @@ export async function renderFinancial() {
   const records  = await db.getAll('financial');
   const sessions = await db.getAll('sessions');
   const active   = students.filter(s => s.status === 'Ativo');
+
+  const now       = new Date();
+  const thisMonth = now.getMonth();
+  const thisYear  = now.getFullYear();
+
   records.sort((a, b) => {
-    // Primeiro vencidos, depois pendentes, depois pagos
-    const order = { overdue: 0, pending: 1, paid: 2 };
+    const order   = { overdue: 0, pending: 1, paid: 2 };
     const aStatus = (a.status === 'pending' && new Date(a.dueDate) < now) ? 'overdue' : a.status;
     const bStatus = (b.status === 'pending' && new Date(b.dueDate) < now) ? 'overdue' : b.status;
     if (order[aStatus] !== order[bStatus]) return order[aStatus] - order[bStatus];
-    // Dentro do mesmo status: mais recente primeiro
     return new Date(b.dueDate) - new Date(a.dueDate);
   });
-
-  const now = new Date();
-  const thisMonth = now.getMonth();
-  const thisYear  = now.getFullYear();
 
   const inThisMonth = (dateStr) => {
     if (!dateStr) return false;
