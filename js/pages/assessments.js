@@ -205,7 +205,7 @@ function renderComposicaoPanel(assessments, students) {
           return `<tr>
             <td>
               <div class="flex items-center gap-sm">
-                <div class="avatar avatar-sm" style="width:24px;height:24px;font-size:0.65rem">${st?st.name[0]:'?'}</div>
+                <div class="avatar avatar-sm" style="width:24px;height:24px;font-size:0.65rem">${st ? st.name.split(' ').filter(Boolean).map(n=>n[0]).slice(0,2).join('').toUpperCase() : '?'}</div>
                 ${st?.name||'?'}
               </div>
             </td>
@@ -255,7 +255,7 @@ function renderForcaPanel(assessments, students) {
           return `<tr>
             <td>
               <div class="flex items-center gap-sm">
-                <div class="avatar avatar-sm" style="width:24px;height:24px;font-size:0.65rem">${st?st.name[0]:'?'}</div>
+                <div class="avatar avatar-sm" style="width:24px;height:24px;font-size:0.65rem">${st ? st.name.split(' ').filter(Boolean).map(n=>n[0]).slice(0,2).join('').toUpperCase() : '?'}</div>
                 ${st?.name||'?'}
               </div>
             </td>
@@ -289,7 +289,7 @@ function renderConconiPanel(assessments, students) {
           return `<tr>
             <td>
               <div class="flex items-center gap-sm">
-                <div class="avatar avatar-sm" style="width:24px;height:24px;font-size:0.65rem">${st?st.name[0]:'?'}</div>
+                <div class="avatar avatar-sm" style="width:24px;height:24px;font-size:0.65rem">${st ? st.name.split(' ').filter(Boolean).map(n=>n[0]).slice(0,2).join('').toUpperCase() : '?'}</div>
                 ${st?.name||'?'}
               </div>
             </td>
