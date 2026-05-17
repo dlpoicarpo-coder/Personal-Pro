@@ -270,7 +270,7 @@ export async function renderAssessments() {
     </div>
 
     <!-- FICHA COMPLETA POR ALUNO -->
-    <div id="panel-ficha" class="assessment-panel" style="display:none">
+<div id="panel-ficha" class="assessment-panel" style="display:none">
       <div class="card">
         <div class="card-header">
           <span class="card-title">Ficha Completa de Avaliação</span>
@@ -291,7 +291,8 @@ export async function renderAssessments() {
         </div>
       </div>
     </div>
-  `;
+
+        <div id="panel-evolucao" class="assessment-panel" style="display:none">
       <div class="card">
         <div class="card-header">
           <span class="card-title">Evolução do Aluno</span>
@@ -307,7 +308,6 @@ export async function renderAssessments() {
     </div>
   `;
 }
-
 function renderComposicaoPanel(assessments, students) {
   if (!assessments.length) return `<div class="empty-state"><div class="empty-icon">—</div><h3>Nenhuma avaliação de composição corporal</h3><p>Clique em "+ Nova Avaliação" para adicionar</p></div>`;
   return `
