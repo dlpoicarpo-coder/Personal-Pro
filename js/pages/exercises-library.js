@@ -136,9 +136,12 @@ export async function renderExercisesLibrary() {
     <!-- ── MÉTODOS ── -->
     <div id="tabMethods" class="lib-tab-content" style="display:none">
       <div class="card mb-md">
-        <div style="position:relative">
-          <svg style="position:absolute;left:9px;top:50%;transform:translateY(-50%);color:var(--text-muted)" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          <input class="form-input" id="methodSearch" placeholder="Buscar método de treinamento..." style="padding-left:32px" />
+        <div class="flex gap-sm items-center">
+          <div style="position:relative;flex:1">
+            <svg style="position:absolute;left:9px;top:50%;transform:translateY(-50%);color:var(--text-muted)" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input class="form-input" id="methodSearch" placeholder="Buscar método de treinamento..." style="padding-left:32px" />
+          </div>
+          <button class="btn btn-primary btn-sm" id="addMethodBtn">+ Novo Método</button>
         </div>
       </div>
       ${Object.entries(methodsByCat).sort(([a],[b])=>a.localeCompare(b)).map(([cat, ms])=>`
@@ -312,6 +315,53 @@ export function initExercisesLibrary(navigateFn) {
   document.getElementById('methodSearch')?.addEventListener('input', e => {
     const q = e.target.value.toLowerCase();
     document.querySelectorAll('.method-item').forEach(el => { el.style.display = el.dataset.name.includes(q)?'':'none'; });
+  });
+
+  // Adicionar método
+  document.getElementById('addMethodBtn')?.addEventListener('click', () => {
+    openModal({
+      title: '+ Novo Método de Treinamento', size: 'md',
+      content: `<form id="methodForm">
+        <div class="form-row">
+          <div class="form-group"><label class="form-label">Nome *</label>
+            <input class="form-input" name="name" required placeholder="Ex: Cluster Avançado" />
+          </div>
+          <div class="form-group"><label class="form-label">Categoria</label>
+            <select class="form-select" name="category">
+              <option>Hipertrofia</option><option>Força</option><option>Cardio</option>
+              <option>Resistência</option><option>Funcional</option><option>Geral</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group"><label class="form-label">Descrição / Como executar *</label>
+          <textarea class="form-textarea" name="description" rows="3" required
+            placeholder="Explique como o método funciona e quando usar..."></textarea>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label class="form-label">Séries recomendadas</label>
+            <input class="form-input" name="sets" placeholder="Ex: 3-4 ou 7" />
+          </div>
+          <div class="form-group"><label class="form-label">Reps / Tempo recomendado</label>
+            <input class="form-input" name="repsHint" placeholder="Ex: 8-12 ou 20s esforço" />
+          </div>
+          <div class="form-group"><label class="form-label">Descanso recomendado</label>
+            <input class="form-input" name="restHint" placeholder="Ex: 90-120s" />
+          </div>
+        </div>
+      </form>`,
+      actions: [
+        { label: 'Cancelar', class: 'btn-secondary', onClick: () => closeModal() },
+        { label: 'Salvar Método', class: 'btn-primary', onClick: async () => {
+          const fd = new FormData(document.getElementById('methodForm'));
+          const d  = Object.fromEntries(fd);
+          if (!d.name || !d.description) { notify.error('Nome e descrição são obrigatórios'); return; }
+          await db.add('methods', d);
+          notify.success('Método criado!');
+          closeModal();
+          navigateFn('/exercicios');
+        }}
+      ]
+    });
   });
 
   // Adicionar exercício
