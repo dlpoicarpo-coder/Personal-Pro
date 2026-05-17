@@ -546,4 +546,255 @@ export async function initReports(navigateFn) {
         <div class="stat"><div class="stat-val">${uniqueWorkouts.length}</div><div class="stat-lbl">Treinos Prescritos</div></div>
         <div class="stat"><div class="stat-val">${sessions.length}</div><div class="stat-lbl">Sessões Realizadas</div></div>
         <div class="stat"><div class="stat-val" style="color:${pseNum>8?'#ef4444':pseNum>6?'#f59e0b':'#10b981'}">${avgPse}</div><div class="stat-lbl">PSE Média</div></div>
-        <div class="stat"><div class="stat-val" style="color:${
+        <div class="stat"><div class="stat-val" style="color:${sleepNum>0&&sleepNum<6?'#ef4444':sleepNum>=7?'#10b981':'#f59e0b'}">${avgSleep}</div><div class="stat-lbl">Sono Médio</div></div>
+        <div class="stat"><div class="stat-val">${Math.round(totalLoad)}</div><div class="stat-lbl">Carga Total</div></div>
+      </div>
+      <h2>Resumo para o Aluno</h2>
+      <p class="section-desc">Análise em linguagem acessível sobre seu progresso.</p>
+      <div class="parecer">${parecerAluno}</div>
+      <h2>Análise Técnica</h2>
+      <p class="section-desc">Avaliação baseada nos indicadores de carga e bem-estar coletados.</p>
+      <div class="tecnico">${parecerTecnico}</div>
+
+      ${sessions.length ? `
+      <h2>Sessões Realizadas</h2>
+      <p class="section-desc">${sessions.length} sessão(ões) · Volume total: ${totalVol.toLocaleString('pt-BR')} kg · Média/sessão: ${avgVolPerSession.toLocaleString('pt-BR')} kg · Duração média: ${avgDuration}min</p>
+      <table>
+        <thead><tr><th>Data</th><th>Treino</th><th>Duração</th><th>Volume</th><th>Séries</th><th>PSE</th></tr></thead>
+        <tbody>
+          ${sessions.sort((a,b)=>new Date(b.date)-new Date(a.date)).slice(0,15).map(se=>`
+            <tr>
+              <td>${new Date(se.date).toLocaleDateString('pt-BR')}</td>
+              <td><strong>${se.workoutName||'-'}</strong></td>
+              <td>${se.totalDuration?Math.round(se.totalDuration/60)+'min':'-'}</td>
+              <td>${se.totalVolume?Math.round(se.totalVolume)+' kg':'-'}</td>
+              <td>${se.totalSets||'-'}</td>
+              <td><strong>${se.postBiofeedback?.pse||'-'}</strong></td>
+            </tr>`).join('')}
+        </tbody>
+      </table>` : ''}
+
+      ${progressionItems.length ? `
+      <h2>Progressão de Carga por Exercício</h2>
+      <p class="section-desc">Evolução da carga registrada ao longo das sessões.</p>
+      <table>
+        <thead><tr><th>Exercício</th><th>1ª Carga</th><th>Última Carga</th><th>Máximo</th><th>Δ Carga</th><th>Evolução</th><th>Vol. Total</th></tr></thead>
+        <tbody>
+          ${progressionItems.map(p=>`
+            <tr>
+              <td><strong>${p.name}</strong></td>
+              <td style="color:#888">${p.first.load}kg</td>
+              <td style="font-weight:700">${p.last.load}kg</td>
+              <td style="color:#f59e0b;font-weight:600">${p.maxLoad}kg</td>
+              <td style="color:${p.delta>=0?'#10b981':'#ef4444'};font-weight:700">${p.delta>0?'+':''}${p.delta}kg</td>
+              <td style="color:${p.delta>=0?'#10b981':'#ef4444'};font-weight:700">${p.delta>0?'↑':'↓'} ${Math.abs(p.pct)}%</td>
+              <td style="color:#666">${(p.totalVol/1000).toFixed(1)}t</td>
+            </tr>`).join('')}
+        </tbody>
+      </table>` : ''}
+
+      ${chartsHTML ? `
+      <h2>Gráficos de Evolução</h2>
+      <p class="section-desc">Visualização dos indicadores coletados.</p>
+      <div class="charts-grid">${chartsHTML}</div>` : ''}
+
+      <div class="footer">
+        Dossiê gerado por ${trainerName} — ${new Date().toLocaleDateString('pt-BR')} — Personal PRO
+      </div>
+    </body></html>`;
+
+    const blob    = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+    const blobUrl = URL.createObjectURL(blob);
+    const tempLink = document.createElement('a');
+    tempLink.href   = blobUrl;
+    tempLink.target = '_blank';
+    tempLink.rel    = 'noopener noreferrer';
+    document.body.appendChild(tempLink);
+    tempLink.click();
+    document.body.removeChild(tempLink);
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 15000);
+    notify.success('PDF aberto! Use Ctrl+P (ou ⌘+P) para salvar.');
+  });
+}
+
+async function initReportCharts(studentId) {
+  if (typeof Chart === 'undefined') return;
+  const bf = (await db.getAll('biofeedback')).filter(b => String(b.studentId) === String(studentId)).sort((a, b) => new Date(a.date) - new Date(b.date));
+  const sessions = (await db.getAll('sessions')).filter(s => String(s.studentId) === String(studentId));
+  const assessments = (await db.getAll('assessments')).filter(a => String(a.studentId) === String(studentId));
+  const co = { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { color: '#94a3b8', font: { size: 11 } } } }, scales: { y: { ticks: { color: '#64748b' }, grid: { color: 'rgba(255,255,255,0.05)' } }, x: { ticks: { color: '#94a3b8' }, grid: { display: false } } } };
+
+  const wCtx = document.getElementById('wellnessChart');
+  const bfWellness = bf.filter(b => b.sleep || b.mood || b.energy || b.stress);
+  if (wCtx && bfWellness.length > 1) {
+    new Chart(wCtx, {
+      type: 'line',
+      data: {
+        labels: bfWellness.map(b => Calc.formatDate(b.date).slice(0,5)),
+        datasets: [
+          { label: 'Sono',       data: bfWellness.map(b => b.sleep  || null), borderColor: '#8b5cf6', backgroundColor: 'rgba(139,92,246,0.05)', tension: 0.3, pointRadius: 4, borderWidth: 2, fill: false, spanGaps: true },
+          { label: 'Disposição', data: bfWellness.map(b => b.mood   || null), borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,0.05)',  tension: 0.3, pointRadius: 4, borderWidth: 2, fill: false, spanGaps: true },
+          { label: 'Energia',    data: bfWellness.map(b => b.energy || null), borderColor: '#06b6d4', backgroundColor: 'rgba(6,182,212,0.05)',   tension: 0.3, pointRadius: 4, borderWidth: 2, fill: false, spanGaps: true },
+          { label: 'Estresse',   data: bfWellness.map(b => b.stress || null), borderColor: '#f59e0b', backgroundColor: 'rgba(245,158,11,0.05)',  tension: 0.3, pointRadius: 4, borderWidth: 2, fill: false, borderDash: [5,3], spanGaps: true },
+        ]
+      },
+      options: { ...co, scales: { ...co.scales, y: { ...co.scales.y, min: 0, max: 10, ticks: { color: '#64748b', stepSize: 2 } } }, plugins: { ...co.plugins, annotation: { annotations: { goodLine: { type: 'line', yMin: 7, yMax: 7, borderColor: 'rgba(16,185,129,0.3)', borderWidth: 1, borderDash: [3,3] } } } } }
+    });
+  }
+
+  const lCtx = document.getElementById('loadChart');
+  if (lCtx && bf.length > 1) {
+    const weeks = {}; bf.forEach(b => { if (!b.trainingLoad) return; const d = new Date(b.date); const ws = new Date(d); ws.setDate(d.getDate() - d.getDay()); const k = ws.toISOString().slice(0, 10); weeks[k] = (weeks[k] || 0) + b.trainingLoad; });
+    const wKeys = Object.keys(weeks).sort().slice(-12);
+    new Chart(lCtx, { type: 'bar', data: { labels: wKeys.map(k => new Date(k + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })), datasets: [{ label: 'Carga', data: wKeys.map(k => weeks[k]), backgroundColor: 'rgba(16,185,129,0.5)', borderColor: '#10b981', borderWidth: 1, borderRadius: 4 }] }, options: { ...co, plugins: { legend: { display: false } } } });
+  }
+
+  const pCtx = document.getElementById('pseChart');
+  if (pCtx && bf.length > 1) {
+    const pd = bf.filter(b => b.pse);
+    new Chart(pCtx, { type: 'line', data: { labels: pd.map(b => Calc.formatDate(b.date)), datasets: [{ label: 'PSE', data: pd.map(b => b.pse), borderColor: '#f43f5e', backgroundColor: 'rgba(244,63,94,0.1)', fill: true, tension: 0.3 }] }, options: { ...co, scales: { ...co.scales, y: { ...co.scales.y, min: 0, max: 10 } } } });
+  }
+
+  const rCtx = document.getElementById('radarChart');
+  if (rCtx && bf.length > 0) {
+    const l5 = bf.slice(-5); const avg = k => l5.reduce((s, b) => s + (b[k] || 0), 0) / l5.length;
+    new Chart(rCtx, { type: 'radar', data: { labels: ['Sono', 'Disposição', 'Energia', 'Baixo Estresse', 'Sem Dor'], datasets: [{ label: 'Média (últimos 5)', data: [avg('sleep'), avg('mood'), avg('energy'), 10 - avg('stress'), 10 - (avg('pain') || 0)], backgroundColor: 'rgba(16,185,129,0.2)', borderColor: '#10b981', pointBackgroundColor: '#10b981' }] }, options: { responsive: true, maintainAspectRatio: false, scales: { r: { min: 0, max: 10, ticks: { stepSize: 2, color: '#64748b', backdropColor: 'transparent' }, grid: { color: 'rgba(255,255,255,0.1)' }, pointLabels: { color: '#94a3b8', font: { size: 11 } } } }, plugins: { legend: { display: false } } } });
+  }
+
+  const fCtx = document.getElementById('freqChart');
+  if (fCtx) {
+    const done = sessions.filter(s => s.status === 'completed');
+    const wc = {}; done.forEach(s => { const d = new Date(s.date || s.createdAt); const ws = new Date(d); ws.setDate(d.getDate() - d.getDay()); const k = ws.toISOString().slice(0, 10); wc[k] = (wc[k] || 0) + 1; });
+    const wKeys = Object.keys(wc).sort().slice(-8);
+    new Chart(fCtx, { type: 'bar', data: { labels: wKeys.map(k => new Date(k + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })), datasets: [{ label: 'Sessões', data: wKeys.map(k => wc[k]), backgroundColor: 'rgba(6,182,212,0.5)', borderColor: '#06b6d4', borderWidth: 1, borderRadius: 4 }] }, options: { ...co, plugins: { legend: { display: false } }, scales: { ...co.scales, y: { ...co.scales.y, beginAtZero: true, ticks: { ...co.scales.y.ticks, stepSize: 1 } } } } });
+  }
+
+  const mCtx = document.getElementById('measuresChart');
+  if (mCtx && assessments.length > 1) {
+    const sorted = [...assessments].sort((a, b) => new Date(a.date) - new Date(b.date));
+    const ds = [];
+    if (sorted.some(a => a.weight)) ds.push({ label: 'Peso (kg)', data: sorted.map(a => a.weight || null), borderColor: '#10b981', tension: 0.3, yAxisID: 'y' });
+    if (sorted.some(a => a.bodyFat)) ds.push({ label: 'BF %', data: sorted.map(a => a.bodyFat || null), borderColor: '#f59e0b', tension: 0.3, yAxisID: 'y1' });
+    if (ds.length) new Chart(mCtx, { type: 'line', data: { labels: sorted.map(a => Calc.formatDate(a.date)), datasets: ds }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { color: '#94a3b8' } } }, scales: { y: { position: 'left', ticks: { color: '#10b981' }, grid: { color: 'rgba(255,255,255,0.05)' } }, y1: { position: 'right', ticks: { color: '#f59e0b' }, grid: { display: false } }, x: { ticks: { color: '#94a3b8' }, grid: { display: false } } } } });
+  }
+
+  const lpCtx = document.getElementById('loadProgressChart');
+  if (lpCtx && sessions.length >= 2) {
+    const logMap = {};
+    [...sessions].filter(s=>s.status==='completed').sort((a,b)=>new Date(a.date)-new Date(b.date)).forEach(s => {
+      (s.setLog||[]).forEach(set => {
+        const name = (s.exercises||[])[set.exIdx]?.name;
+        if (!name || !set.load || set.load<=0) return;
+        if (!logMap[name]) logMap[name] = [];
+        logMap[name].push({ date: s.date, load: set.load });
+      });
+    });
+    const top3 = Object.entries(logMap)
+      .filter(([,v])=>v.length>=2)
+      .sort((a,b)=>b[1].length-a[1].length)
+      .slice(0,3);
+
+    if (top3.length) {
+      const colors = ['#10b981','#06b6d4','#f59e0b'];
+      new Chart(lpCtx, {
+        type: 'line',
+        data: {
+          datasets: top3.map(([name, points], i) => ({
+            label: name,
+            data: points.map(p => {
+              const [ano, mes, dia] = p.date.split('-');
+              return { x: `${dia}/${mes}`, y: p.load };
+            }),
+            borderColor: colors[i],
+            backgroundColor: colors[i]+'15',
+            tension: 0.3,
+            pointRadius: 4,
+            borderWidth: 2,
+            fill: false,
+          }))
+        },
+        options: {
+          ...co,
+          scales: {
+            x: { ticks:{ color:'#94a3b8', font:{size:9} }, grid:{display:false} },
+            y: { ticks:{ color:'#64748b', font:{size:9}, callback: v => v+'kg' }, grid:{ color:'rgba(148,163,184,0.07)' } }
+          },
+          plugins: { legend: { labels:{ color:'#94a3b8', font:{size:10}, boxWidth:12 } } }
+        }
+      });
+    }
+  }
+
+  const cdCtx = document.getElementById('cycleDiffChart');
+  if (cdCtx && bf.length >= 4) {
+    const mid = Math.floor(bf.length / 2);
+    const first = bf.slice(0, mid);
+    const second = bf.slice(mid);
+    const avgOf = (arr, key) => arr.length ? (arr.reduce((s, b) => s + (b[key] || 0), 0) / arr.length).toFixed(1) : 0;
+    const metrics = ['sleep', 'mood', 'energy', 'stress', 'pse'];
+    const labels  = ['Sono', 'Disposição', 'Energia', 'Estresse', 'PSE'];
+    const firstData = metrics.map(k => parseFloat(avgOf(first, k)));
+    const secondData = metrics.map(k => parseFloat(avgOf(second, k)));
+
+    new Chart(cdCtx, {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [
+          { label: `Período 1 (${first.length} registros)`, data: firstData, backgroundColor: 'rgba(148,163,184,0.5)', borderColor: '#94a3b8', borderWidth: 1, borderRadius: 4 },
+          { label: `Período 2 (${second.length} registros)`, data: secondData, backgroundColor: 'rgba(16,185,129,0.6)', borderColor: '#10b981', borderWidth: 1, borderRadius: 4 },
+        ]
+      },
+      options: {
+        ...co,
+        scales: { ...co.scales, y: { ...co.scales.y, min: 0, max: 10 } },
+        plugins: {
+          legend: { labels: { color: '#94a3b8', font: { size: 11 } } },
+          tooltip: {
+            callbacks: {
+              afterBody: (items) => {
+                const idx = items[0]?.dataIndex;
+                if (idx === undefined) return '';
+                const diff = secondData[idx] - firstData[idx];
+                const arrow = diff > 0 ? '↑' : diff < 0 ? '↓' : '=';
+                const sign = diff > 0 ? '+' : '';
+                return `Variação: ${arrow} ${sign}${diff.toFixed(1)}`;
+              }
+            }
+          }
+        }
+      }
+    });
+  }
+}
+
+async function loadPeriodizationForReport(studentId) {
+  const container = document.getElementById('reportPeriodization');
+  if (!container) return;
+  const macros = (await db.getAll('macrocycles')).filter(m => String(m.studentId) === String(studentId));
+  const active = macros.find(m => m.status === 'active') || macros[0];
+  if (!active || !active.weeks) {
+    container.innerHTML = '<p class="text-muted text-sm">Nenhuma periodização encontrada para este aluno.</p>';
+    return;
+  }
+  const currentWeek = Math.ceil((Date.now() - new Date(active.startDate).getTime()) / (7 * 86400000));
+  container.innerHTML = `
+    <div class="text-sm text-muted mb-sm"><strong>${active.name}</strong> · ${active.totalWeeks} semanas · Início: ${new Date(active.startDate).toLocaleDateString('pt-BR')}</div>
+    <div class="week-timeline" style="min-height:60px">
+      ${active.weeks.map((w, i) => {
+        const intColor = w.phase === 'deload' ? '#3b82f6' : w.intensityPct >= 85 ? '#ef4444' : w.intensityPct >= 75 ? '#f97316' : w.intensityPct >= 65 ? '#eab308' : '#22c55e';
+        return `<div class="week-block ${i + 1 === currentWeek ? 'week-current' : ''}" style="border-bottom:3px solid ${intColor}" title="Sem ${w.week}: ${w.label} — Vol: ${w.volumePct}% | Int: ${w.intensityPct}%">
+          <div class="week-num" style="color:${intColor}">S${w.week}</div>
+          <div class="week-bar-int" style="height:${w.intensityPct * 0.4}px;background:${intColor}"></div>
+        </div>`;
+      }).join('')}
+    </div>
+    <div class="flex gap-md mt-sm text-xs text-muted" style="flex-wrap:wrap">
+      <span style="color:#22c55e">● Leve</span>
+      <span style="color:#eab308">● Moderada</span>
+      <span style="color:#f97316">● Alta</span>
+      <span style="color:#ef4444">● Muito Alta</span>
+      <span style="color:#3b82f6">● Deload</span>
+    </div>
+  `;
+}
