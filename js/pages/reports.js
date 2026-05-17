@@ -34,22 +34,27 @@ export async function renderReports() {
   `;
 }
 
-async function getStudentCycles(studentId) {
-  const workouts = await db.getAll('workouts');
-  const sessions = await db.getAll('sessions');
+async function renderStudentReport(studentId, cycleFilter = '') {
+  const student = await db.get('students', studentId);
+  if (!student) return '';
   
-  // Garantimos a comparação correta transformando os IDs em String
-  const studentWorkouts = workouts.filter(w => String(w.studentId) === String(studentId));
-  const studentSessions = sessions.filter(s => String(s.studentId) === String(studentId));
+  // Busca e filtra os treinos aplicando a regra de String
+  const allWorkouts = (await db.getAll('workouts')).filter(w => String(w.studentId) === String(studentId));
+  const workouts = cycleFilter ? allWorkouts.filter(w => (w.cycle || w.ciclo) === cycleFilter) : allWorkouts;
   
-  // Puxa ciclos tanto dos treinos montados quanto das sessões realizadas (aceitando 'cycle' ou 'ciclo')
-  const cycles = [...new Set([
-    ...studentWorkouts.map(w => w.cycle || w.ciclo),
-    ...studentSessions.map(s => s.cycle || s.ciclo)
-  ].filter(Boolean))];
+  // Busca e filtra as sessões concluídas com base no ciclo selecionado
+  let sessions = (await db.getAll('sessions')).filter(s => String(s.studentId) === String(studentId));
+  if (cycleFilter) {
+    const nomesTreinosDoCiclo = workouts.map(w => w.name);
+    sessions = sessions.filter(s => 
+      (s.cycle || s.ciclo) === cycleFilter || 
+      nomesTreinosDoCiclo.includes(s.workoutName)
+    );
+  }
   
-  return cycles.sort();
-}
+  const bf = (await db.getAll('biofeedback')).filter(b => String(b.studentId) === String(studentId)).sort((a, b) => new Date(a.date) - new Date(b.date));
+  const assessments = (await db.getAll('assessments')).filter(a => String(a.studentId) === String(studentId));
+  const completed = sessions.filter(s => s.status === 'completed');
 async function renderStudentReport(studentId, cycleFilter = '') {
   const student = await db.get('students', studentId);
   if (!student) return '';
