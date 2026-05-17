@@ -93,7 +93,7 @@ export async function renderWorkouts() {
                 return `<tr data-student="${w.studentId}" data-macroid="${w.macrocycleId || ''}" data-name="${(w.name||'').toLowerCase()}">
                   <td>
                     <div class="flex items-center gap-sm">
-                      <div class="avatar avatar-sm" style="width:26px;height:26px;font-size:0.7rem">${st?st.name[0]:'?'}</div>
+                      <div class="avatar avatar-sm" style="width:26px;height:26px;font-size:0.7rem">${st ? st.name.split(' ').filter(Boolean).map(n=>n[0]).slice(0,2).join('').toUpperCase() : '?'}</div>
                       <span style="font-size:0.85rem">${st?.name || '?'}</span>
                     </div>
                   </td>
@@ -388,7 +388,7 @@ export function initWorkouts(navigateFn) {
         title: w.name, size: 'lg',
         content: `
           <div class="flex items-center gap-md mb-md">
-            <div class="avatar">${st ? st.name[0] : '?'}</div>
+            <div class="avatar">${st ? st.name.split(' ').filter(Boolean).map(n=>n[0]).slice(0,2).join('').toUpperCase() : '?'}</div>
             <div>
               <div style="font-weight:700">${st?.name || '?'}</div>
               <div class="text-muted text-xs">
