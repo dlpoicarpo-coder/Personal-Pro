@@ -152,7 +152,7 @@ export async function renderFinancial() {
           const days   = Math.floor((now-new Date(oldest.dueDate))/86400000);
           return `
           <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border-color)">
-            <div class="avatar avatar-sm">${s.name[0]}</div>
+            <div class="avatar avatar-sm">${s.name.split(' ').filter(Boolean).map(n=>n[0]).slice(0,2).join('').toUpperCase()}</div>
             <div style="flex:1">
               <div style="font-weight:600;font-size:0.88rem">${s.name}</div>
               <div class="text-xs" style="color:var(--danger)">${sOverdue.length} parcela(s) · ${days}d em atraso · ${fmtBRL(total)}</div>
@@ -202,7 +202,7 @@ export async function renderFinancial() {
               return `<tr data-status="${isOverdue?'overdue':r.status}" data-name="${(st?.name||'').toLowerCase()}">
                 <td>
                   <div class="flex items-center gap-sm">
-                    <div class="avatar avatar-sm" style="width:24px;height:24px;font-size:0.65rem">${st?st.name[0]:'?'}</div>
+                    <div class="avatar avatar-sm" style="width:24px;height:24px;font-size:0.65rem">${st ? st.name.split(' ').filter(Boolean).map(n=>n[0]).slice(0,2).join('').toUpperCase() : '?'}</div>
                     <span style="font-size:0.85rem">${st?.name||'?'}</span>
                   </div>
                 </td>
@@ -254,7 +254,7 @@ export async function renderFinancial() {
             return `<tr>
               <td>
                 <div class="flex items-center gap-sm">
-                  <div class="avatar avatar-sm" style="width:22px;height:22px;font-size:0.6rem">${s.name[0]}</div>
+                  <div class="avatar avatar-sm" style="width:22px;height:22px;font-size:0.6rem">${s.name.split(' ').filter(Boolean).map(n=>n[0]).slice(0,2).join('').toUpperCase()}</div>
                   ${s.name}
                 </div>
               </td>
