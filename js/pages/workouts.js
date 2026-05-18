@@ -804,10 +804,3 @@ function bindExerciseRowHandlers(allExercises, allMethods) {
     });
   });
 }
-    sel.addEventListener('change', () => {
-      const i = sel.dataset.index;
-      const lbl = document.getElementById(`loadLbl_${i}`);
-      if (lbl) lbl.textContent = sel.value === 'time' ? 'Intensidade' : sel.value === 'bodyweight' ? 'Extra (kg)' : 'Carga (kg)';
-    });
-  });
-}
