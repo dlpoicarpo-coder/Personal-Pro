@@ -6,7 +6,35 @@ import db from '../db.js';
 import { Calc } from '../utils/calculations.js';
 import { openModal, closeModal } from '../components/modal.js';
 import { notify } from '../components/toast.js';
-import { PERIODIZATION_MODELS } from '../utils/periodization-engine.js';
+import { PERIODIZATION_MODELS, CARDIO_PERIODIZATION_MODELS, ALL_MODELS, TRAINING_GOALS, generateProgression, validateMacrocycle } from '../utils/periodization-engine.js';
+import { BUILT_IN_TEMPLATES } from '../utils/workout-templates.js';
+
+// Adaptar BUILT_IN_TEMPLATES para o formato que o periodization espera
+// (sessions com exercises) a partir do formato workouts[]
+function adaptTemplate(t) {
+  return {
+    id:   t.id,
+    name: t.name,
+    days: t.daysPerWeek || (t.workouts || []).length,
+    desc: t.description || '',
+    category: t.category || 'Musculação',
+    perioModel: t.perioModel || null, // modelo de cardio sugerido
+    sessions: (t.workouts || []).map(w => ({
+      name:      w.name,
+      exercises: (w.exercises || []).map(e => ({
+        name: e.name,
+        sets: e.sets || 3,
+        reps: e.reps || '12',
+        rest: parseInt(e.rest) || 60,
+        loadType: e.loadType || 'weight',
+        method:   e.method || '',
+        intensity: e.intensity || '',
+      })),
+    })),
+  };
+}
+
+const BUILT_IN_WORKOUT_TEMPLATES = BUILT_IN_TEMPLATES.map(adaptTemplate);
 
 // ── GERADOR DE SEMANAS INTERNO ─────────────────────────────
 function generateInternalWeeklyPlan(modelType, totalWeeks, deloadEvery) {
@@ -83,191 +111,6 @@ const TRAINING_DAYS = [
 const HOURS = ['05:00','06:00','07:00','08:00','09:00','10:00','11:00','14:00','15:00','16:00','17:00','18:00','19:00','20:00','21:00'];
 
 // ── TEMPLATES PADRÃO COM EXERCÍCIOS ──────────────────────────
-const BUILT_IN_WORKOUT_TEMPLATES = [
-  {
-    id: 'full_body_ab',
-    name: 'Full Body A/B',
-    days: 2,
-    desc: '2x por semana · Treino completo alternado',
-    sessions: [
-      {
-        name: 'Full Body A',
-        exercises: [
-          { name: 'Agachamento Livre com Barra', sets: 4, reps: '10-12', rest: 90 },
-          { name: 'Supino Reto com Barra',       sets: 4, reps: '10-12', rest: 90 },
-          { name: 'Puxada Frontal',               sets: 3, reps: '10-12', rest: 75 },
-          { name: 'Desenvolvimento com Halteres', sets: 3, reps: '12',    rest: 75 },
-          { name: 'Prancha Frontal',              sets: 3, reps: '30s',   rest: 60 },
-        ]
-      },
-      {
-        name: 'Full Body B',
-        exercises: [
-          { name: 'Leg Press 45°',                sets: 4, reps: '12-15', rest: 90 },
-          { name: 'Supino Inclinado com Halteres',sets: 3, reps: '12',    rest: 75 },
-          { name: 'Remada Curvada com Barra',     sets: 4, reps: '10-12', rest: 90 },
-          { name: 'Elevação Lateral',             sets: 3, reps: '15',    rest: 60 },
-          { name: 'Hip Thrust',                   sets: 3, reps: '12',    rest: 75 },
-        ]
-      }
-    ]
-  },
-  {
-    id: 'abc_3x',
-    name: 'ABC — 3x por semana',
-    days: 3,
-    desc: 'A: Peito/Tríceps · B: Costas/Bíceps · C: Pernas/Ombros',
-    sessions: [
-      {
-        name: 'Treino A — Peito e Tríceps',
-        exercises: [
-          { name: 'Supino Reto com Barra',         sets: 4, reps: '8-10',  rest: 120 },
-          { name: 'Supino Inclinado com Halteres', sets: 3, reps: '10-12', rest: 90  },
-          { name: 'Crucifixo Reto',                sets: 3, reps: '12',    rest: 75  },
-          { name: 'Tríceps Pulley',                sets: 3, reps: '12-15', rest: 60  },
-          { name: 'Tríceps Testa',                 sets: 3, reps: '10-12', rest: 75  },
-        ]
-      },
-      {
-        name: 'Treino B — Costas e Bíceps',
-        exercises: [
-          { name: 'Puxada Frontal',               sets: 4, reps: '8-10',  rest: 120 },
-          { name: 'Remada Curvada com Barra',     sets: 4, reps: '10-12', rest: 90  },
-          { name: 'Remada Unilateral com Halter', sets: 3, reps: '10-12', rest: 75  },
-          { name: 'Rosca Direta com Barra',       sets: 3, reps: '10-12', rest: 75  },
-          { name: 'Rosca Alternada com Halteres', sets: 3, reps: '12',    rest: 60  },
-        ]
-      },
-      {
-        name: 'Treino C — Pernas e Ombros',
-        exercises: [
-          { name: 'Agachamento Livre com Barra',  sets: 4, reps: '8-10',  rest: 120 },
-          { name: 'Leg Press 45°',                sets: 3, reps: '12-15', rest: 90  },
-          { name: 'Mesa Flexora',                 sets: 3, reps: '12',    rest: 75  },
-          { name: 'Desenvolvimento com Halteres', sets: 4, reps: '10-12', rest: 90  },
-          { name: 'Elevação Lateral',             sets: 3, reps: '15',    rest: 60  },
-        ]
-      }
-    ]
-  },
-  {
-    id: 'upper_lower',
-    name: 'Upper / Lower — 4x por semana',
-    days: 4,
-    desc: 'Superior A/B · Inferior A/B — Alternado',
-    sessions: [
-      {
-        name: 'Superior A',
-        exercises: [
-          { name: 'Supino Reto com Barra',        sets: 4, reps: '6-8',   rest: 120 },
-          { name: 'Puxada Frontal',               sets: 4, reps: '6-8',   rest: 120 },
-          { name: 'Desenvolvimento com Halteres', sets: 3, reps: '10-12', rest: 90  },
-          { name: 'Rosca Direta com Barra',       sets: 3, reps: '10-12', rest: 75  },
-          { name: 'Tríceps Pulley',               sets: 3, reps: '10-12', rest: 75  },
-        ]
-      },
-      {
-        name: 'Inferior A',
-        exercises: [
-          { name: 'Agachamento Livre com Barra',  sets: 4, reps: '6-8',   rest: 120 },
-          { name: 'Stiff com Barra',              sets: 3, reps: '8-10',  rest: 90  },
-          { name: 'Cadeira Extensora',            sets: 3, reps: '12-15', rest: 75  },
-          { name: 'Hip Thrust',                   sets: 4, reps: '10-12', rest: 90  },
-          { name: 'Panturrilha em Pé',            sets: 4, reps: '15-20', rest: 60  },
-        ]
-      },
-      {
-        name: 'Superior B',
-        exercises: [
-          { name: 'Supino Inclinado com Halteres',sets: 4, reps: '8-10',  rest: 90 },
-          { name: 'Remada Curvada com Barra',     sets: 4, reps: '8-10',  rest: 90 },
-          { name: 'Elevação Lateral',             sets: 4, reps: '12-15', rest: 60 },
-          { name: 'Rosca Martelo',                sets: 3, reps: '12',    rest: 60 },
-          { name: 'Tríceps Corda',                sets: 3, reps: '12-15', rest: 60 },
-        ]
-      },
-      {
-        name: 'Inferior B',
-        exercises: [
-          { name: 'Leg Press 45°',                sets: 4, reps: '10-12', rest: 90 },
-          { name: 'Mesa Flexora',                 sets: 3, reps: '12',    rest: 75 },
-          { name: 'Agachamento Búlgaro',          sets: 3, reps: '10',    rest: 75 },
-          { name: 'Abdução na Máquina',           sets: 3, reps: '15',    rest: 60 },
-          { name: 'Panturrilha Sentado',          sets: 3, reps: '15-20', rest: 60 },
-        ]
-      }
-    ]
-  },
-  {
-    id: 'push_pull_legs',
-    name: 'Push / Pull / Legs',
-    days: 3,
-    desc: 'Push · Pull · Legs — 3 a 6x por semana',
-    sessions: [
-      {
-        name: 'Push — Peito, Ombros e Tríceps',
-        exercises: [
-          { name: 'Supino Reto com Barra',         sets: 4, reps: '8-10',  rest: 120 },
-          { name: 'Supino Inclinado com Halteres', sets: 3, reps: '10-12', rest: 90  },
-          { name: 'Desenvolvimento com Halteres',  sets: 4, reps: '10-12', rest: 90  },
-          { name: 'Elevação Lateral',              sets: 3, reps: '15',    rest: 60  },
-          { name: 'Tríceps Pulley',                sets: 3, reps: '12-15', rest: 60  },
-          { name: 'Tríceps Testa',                 sets: 3, reps: '10-12', rest: 75  },
-        ]
-      },
-      {
-        name: 'Pull — Costas e Bíceps',
-        exercises: [
-          { name: 'Puxada Frontal',               sets: 4, reps: '8-10',  rest: 120 },
-          { name: 'Remada Curvada com Barra',     sets: 4, reps: '8-10',  rest: 90  },
-          { name: 'Remada Unilateral com Halter', sets: 3, reps: '10-12', rest: 75  },
-          { name: 'Face Pull',                    sets: 3, reps: '15',    rest: 60  },
-          { name: 'Rosca Direta com Barra',       sets: 3, reps: '10-12', rest: 75  },
-          { name: 'Rosca Martelo',                sets: 3, reps: '12',    rest: 60  },
-        ]
-      },
-      {
-        name: 'Legs — Pernas e Glúteos',
-        exercises: [
-          { name: 'Agachamento Livre com Barra',  sets: 4, reps: '8-10',  rest: 120 },
-          { name: 'Leg Press 45°',                sets: 3, reps: '12-15', rest: 90  },
-          { name: 'Stiff com Barra',              sets: 3, reps: '10-12', rest: 90  },
-          { name: 'Hip Thrust',                   sets: 4, reps: '10-12', rest: 90  },
-          { name: 'Cadeira Extensora',            sets: 3, reps: '15',    rest: 60  },
-          { name: 'Panturrilha em Pé',            sets: 4, reps: '15-20', rest: 60  },
-        ]
-      }
-    ]
-  },
-  {
-    id: 'adaptacao_anatomica',
-    name: 'Adaptação Anatômica',
-    days: 2,
-    desc: 'Iniciantes · Osteopenia · Reabilitação · 2x/sem',
-    sessions: [
-      {
-        name: 'Sessão A — Full Body Leve',
-        exercises: [
-          { name: 'Leg Press 45°',                sets: 3, reps: '15', rest: 75 },
-          { name: 'Supino Reto com Barra',        sets: 3, reps: '15', rest: 75 },
-          { name: 'Remada Baixa (Sentado)',        sets: 3, reps: '15', rest: 75 },
-          { name: 'Desenvolvimento com Halteres', sets: 3, reps: '15', rest: 60 },
-          { name: 'Prancha Frontal',              sets: 3, reps: '20s', rest: 60 },
-        ]
-      },
-      {
-        name: 'Sessão B — Full Body Leve',
-        exercises: [
-          { name: 'Cadeira Extensora',            sets: 3, reps: '15', rest: 75 },
-          { name: 'Peck Deck (Voador)',           sets: 3, reps: '15', rest: 60 },
-          { name: 'Puxada Frontal',               sets: 3, reps: '15', rest: 75 },
-          { name: 'Elevação Lateral',             sets: 3, reps: '15', rest: 60 },
-          { name: 'Hip Thrust',                   sets: 3, reps: '15', rest: 75 },
-        ]
-      }
-    ]
-  },
-];
 
 export async function renderPeriodization() {
   const students = await db.getAll('students');
@@ -498,41 +341,61 @@ export function initPeriodization(navigateFn) {
 
     let selectedTemplate = null;
 
-    const builtInHTML = BUILT_IN_WORKOUT_TEMPLATES.map(t => `
-      <div class="periodo-tpl-card" data-tpl-id="${t.id}" style="
-        padding:10px 14px;
-        border:1px solid var(--border-color);
-        border-radius:var(--radius-md);
-        cursor:pointer;
-        transition:border-color var(--transition-fast),background var(--transition-fast);
-        background:var(--bg-card)">
-        <div style="font-weight:600;font-size:0.85rem;color:var(--text-primary)">${t.name}</div>
-        <div style="font-size:0.72rem;color:var(--text-muted);margin-top:3px">${t.desc}</div>
-        <div style="font-size:0.68rem;color:var(--text-muted);margin-top:4px;display:flex;gap:8px">
-          <span style="color:var(--accent)">${t.sessions.length} sessões</span>
-          <span>·</span>
-          <span>${t.sessions.reduce((a,s) => a + s.exercises.length, 0)} exercícios</span>
-        </div>
-      </div>`).join('');
+    // Agrupar templates por categoria
+    const tplByCategory = {};
+    BUILT_IN_WORKOUT_TEMPLATES.forEach(t => {
+      const cat = t.category || 'Musculação';
+      if (!tplByCategory[cat]) tplByCategory[cat] = [];
+      tplByCategory[cat].push(t);
+    });
+
+    function tplCardHTML(t) {
+      const isCardio = t.category === 'Cardio / Endurance';
+      const exCount  = t.sessions.reduce((a,s) => a + s.exercises.length, 0);
+      const catColor = isCardio ? 'var(--accent)' : 'var(--primary)';
+      return `
+        <div class="periodo-tpl-card" data-tpl-id="${t.id}" style="
+          padding:10px 14px;border:1px solid var(--border-color);
+          border-radius:var(--radius-md);cursor:pointer;
+          transition:border-color 0.15s,background 0.15s;background:var(--bg-card)">
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">
+            <div style="font-weight:600;font-size:0.83rem;color:var(--text-primary);flex:1">${t.name}</div>
+            ${isCardio ? `<span style="font-size:0.6rem;background:rgba(6,182,212,0.12);color:var(--accent);padding:1px 6px;border-radius:8px;font-weight:600">Cardio</span>` : ''}
+          </div>
+          <div style="font-size:0.7rem;color:var(--text-muted);margin-top:2px">${t.desc}</div>
+          <div style="font-size:0.68rem;color:var(--text-muted);margin-top:4px;display:flex;gap:8px;flex-wrap:wrap">
+            <span style="color:${catColor}">${t.sessions.length} sessão(ões)</span>
+            <span>·</span>
+            <span>${exCount} exercícios</span>
+            ${t.days ? `<span>·</span><span>${t.days}×/sem</span>` : ''}
+          </div>
+        </div>`;
+    }
+
+    const CAT_ORDER = ['Hipertrofia','Força','Emagrecimento','Funcional','Reabilitação','Cardio / Endurance'];
+    const builtInHTML = CAT_ORDER
+      .filter(cat => tplByCategory[cat]?.length)
+      .map(cat => `
+        <div style="margin-bottom:8px">
+          <div style="font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:var(--text-muted);margin-bottom:5px;padding-bottom:3px;border-bottom:1px solid var(--border-color)">${cat}</div>
+          <div style="display:flex;flex-direction:column;gap:4px">
+            ${tplByCategory[cat].map(tplCardHTML).join('')}
+          </div>
+        </div>`).join('');
 
     const personalHTML = customCycles.length
       ? customCycles.map(c => {
           const totalEx = (c.workouts || []).reduce((a, w) => a + (w.exercises || []).length, 0);
           return `
           <div class="periodo-tpl-card" data-tpl-id="cycle_${c.id}" style="
-            padding:10px 14px;
-            border:1px solid var(--border-color);
-            border-radius:var(--radius-md);
-            cursor:pointer;
-            transition:border-color var(--transition-fast),background var(--transition-fast);
-            background:var(--bg-card)">
+            padding:10px 14px;border:1px solid var(--border-color);
+            border-radius:var(--radius-md);cursor:pointer;
+            transition:border-color 0.15s,background 0.15s;background:var(--bg-card)">
             <div style="font-weight:600;font-size:0.85rem;color:var(--text-primary)">${c.name}</div>
             <div style="font-size:0.72rem;color:var(--text-muted);margin-top:3px;display:flex;gap:8px">
               <span style="color:var(--primary)">${c.goal || 'Geral'}</span>
-              <span>·</span>
-              <span>${(c.workouts||[]).length} treinos</span>
-              <span>·</span>
-              <span>${totalEx} exercícios</span>
+              <span>·</span><span>${(c.workouts||[]).length} treinos</span>
+              <span>·</span><span>${totalEx} exercícios</span>
             </div>
             ${c.description ? `<div style="font-size:0.68rem;color:var(--text-muted);margin-top:3px">${c.description}</div>` : ''}
           </div>`;}).join('')
@@ -553,8 +416,8 @@ export function initPeriodization(navigateFn) {
               <span style="font-size:0.7rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-muted)">Modelo de Treino</span>
             </div>
 
-            <p class="text-xs text-muted mb-sm">Templates padrão do sistema</p>
-            <div style="display:flex;flex-direction:column;gap:5px;margin-bottom:16px" id="builtInTpls">${builtInHTML}</div>
+            <p class="text-xs text-muted mb-sm">Templates padrão do sistema <span style="color:var(--text-muted);font-size:0.65rem">(Musculação + Cardio)</span></p>
+            <div style="display:flex;flex-direction:column;gap:0;margin-bottom:16px;max-height:340px;overflow-y:auto;padding-right:2px" id="builtInTpls">${builtInHTML}</div>
 
             <div style="border-top:1px solid var(--border-color);padding-top:14px;margin-top:4px">
               <p class="text-xs text-muted mb-sm">Seus modelos <span style="color:var(--text-muted);font-size:0.65rem">(Exercícios → Meus Modelos)</span></p>
@@ -838,7 +701,23 @@ export function initPeriodization(navigateFn) {
             });
           } else {
             selectedTemplate = BUILT_IN_WORKOUT_TEMPLATES.find(t => t.id === tplId);
-            if (selectedTemplate) renderLoadInputs(selectedTemplate.sessions.flatMap(s => s.exercises));
+            if (selectedTemplate) {
+              // Auto-selecionar modelo de periodização correspondente (cardio)
+              if (selectedTemplate.perioModel) {
+                const typeSelect = document.querySelector('#macroForm [name="type"]');
+                if (typeSelect) typeSelect.value = selectedTemplate.perioModel;
+              }
+              // Para cardio: não mostra cargas (são por tempo/intensidade)
+              const isCardio = selectedTemplate.category === 'Cardio / Endurance';
+              const allEx = selectedTemplate.sessions.flatMap(s => s.exercises)
+                .filter(e => (e.loadType || 'weight') === 'weight'); // só exercícios com peso
+              if (isCardio) {
+                const loadsEl = document.getElementById('tplExerciseLoads');
+                if (loadsEl) loadsEl.innerHTML = `<div style="padding:10px;background:rgba(6,182,212,0.07);border-radius:8px;border-left:3px solid var(--accent)"><div style="font-size:0.78rem;color:var(--accent);font-weight:600;margin-bottom:3px">Template Cardio</div><div class="text-xs text-muted">Sessões baseadas em tempo e intensidade (zonas de FC/VO₂max). Não requer cargas de peso.</div></div>`;
+              } else {
+                renderLoadInputs(allEx);
+              }
+            }
           }
         });
       });
