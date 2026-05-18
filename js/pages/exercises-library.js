@@ -240,7 +240,7 @@ export async function renderExercisesLibrary() {
                 </div>
                 <div style="display:flex;gap:4px">
                   <button class="btn btn-primary btn-sm apply-custom-tpl" data-id="${t.id}">Aplicar</button>
-                  <button class="btn btn-ghost btn-sm delete-custom-tpl" data-id="${t.id}" style="color:var(--danger);padding:4px 6px">${ex.is_default ? "" : ICON_DEL}</button>
+                  <button class="btn btn-ghost btn-sm delete-custom-tpl" data-id="${t.id}" style="color:var(--danger);padding:4px 6px">${t.is_default ? "" : ICON_DEL}</button>
                 </div>
               </div>
               ${t.description?`<p class="text-xs text-muted mb-sm">${t.description}</p>`:''}
