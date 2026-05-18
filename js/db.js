@@ -316,8 +316,14 @@ class Database {
       const existingNames = new Set(existing.map(e => e.name.toLowerCase()));
       for (const ex of exercises) {
         if (!existingNames.has(ex.name.toLowerCase())) {
-          await this.add('exercises', ex);
+          await this.add('exercises', { ...ex, is_default: true });
         }
+      }
+
+      // Marcar exercícios existentes sem is_default como padrão
+      const toMark = existing.filter(e => !e.is_default);
+      for (const e of toMark) {
+        await this.put('exercises', { ...e, is_default: true });
       }
     }
   }
@@ -362,9 +368,30 @@ class Database {
     const existingNames = new Set(existing.map(m => m.name));
     for (const m of methods) {
       if (!existingNames.has(m.name)) {
-        await this.add('methods', m);
+        await this.add('methods', { ...m, is_default: true });
       }
     }
+    // Marcar métodos existentes sem is_default como padrão
+    const toMark = existing.filter(m => !m.is_default);
+    for (const m of toMark) {
+      await this.put('methods', { ...m, is_default: true });
+    }
+  }
+
+
+  // ── RESEED ADMIN — marca todos os padrões (chamado pelo painel admin) ──
+  async reseedDefaults() {
+    // Marcar todos os exercícios existentes como padrão
+    const exercises = await this.getAll('exercises');
+    for (const e of exercises) {
+      if (!e.is_default) await this.put('exercises', { ...e, is_default: true });
+    }
+    // Marcar todos os métodos existentes como padrão
+    const methods = await this.getAll('methods');
+    for (const m of methods) {
+      if (!m.is_default) await this.put('methods', { ...m, is_default: true });
+    }
+    return { exercises: exercises.length, methods: methods.length };
   }
 
 
