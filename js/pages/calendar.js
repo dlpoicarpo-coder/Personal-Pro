@@ -506,4 +506,124 @@ function bindAddEvent(navigateFn) {
       });
     }, 100);
   });
+
+  // ── LEMBRETES AUTOMÁTICOS VIA WHATSAPP ──────────────────────
+  // Verifica agendamentos a cada 60s e dispara WA 10h e 30min antes
+  initAutoReminders();
+}
+
+// ─────────────────────────────────────────────────────────────
+// Sistema de lembretes automáticos
+// Salva no localStorage quais lembretes já foram enviados (por id+tipo)
+// para não disparar duas vezes na mesma sessão/dia
+// ─────────────────────────────────────────────────────────────
+function initAutoReminders() {
+  // Evita duplicar o intervalo se a página for reconstruída
+  if (window._ppReminderInterval) clearInterval(window._ppReminderInterval);
+  checkReminders(); // rodar imediatamente
+  window._ppReminderInterval = setInterval(checkReminders, 60_000); // a cada 1 min
+}
+
+async function checkReminders() {
+  try {
+    const events   = await db.getAll('schedules');
+    const students = await db.getAll('students');
+    const settings = await db.get('settings','trainer').catch(()=>({}));
+    const now      = Date.now();
+
+    // Carrega histórico de lembretes enviados hoje
+    const today     = new Date().toISOString().slice(0,10);
+    const storageKey= `pp_reminders_${today}`;
+    let sent = {};
+    try { sent = JSON.parse(localStorage.getItem(storageKey)||'{}'); } catch(_) {}
+
+    for (const ev of events) {
+      if (ev.status === 'completed' || ev.status === 'missed') continue;
+      if (!ev.date || !ev.time) continue;
+
+      const st = students.find(s => s.id === ev.studentId);
+      if (!st?.phone) continue;
+
+      const [h, m]      = (ev.time || '08:00').split(':').map(Number);
+      const eventMs     = new Date(`${ev.date}T${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:00`).getTime();
+      const diffMin     = (eventMs - now) / 60_000;
+
+      // ── Lembrete 10h antes (janela 9h50 a 10h) ──────────────
+      const id10h = `${ev.id}_10h`;
+      if (!sent[id10h] && diffMin >= 590 && diffMin <= 600) {
+        sent[id10h] = new Date().toISOString();
+        const baseUrl = window.location.href.split('#')[0];
+        const preLink = `${baseUrl}#/form/pre/${ev.studentId}`;
+        const msg = buildReminderMsg(st.name, ev, '10 horas', preLink, settings?.trainerName);
+        openAutoReminderToast(`Lembrete 10h para ${st.name}`, st.phone, msg);
+      }
+
+      // ── Lembrete 30min antes (janela 29 a 31min) ────────────
+      const id30m = `${ev.id}_30m`;
+      if (!sent[id30m] && diffMin >= 29 && diffMin <= 31) {
+        sent[id30m] = new Date().toISOString();
+        const baseUrl = window.location.href.split('#')[0];
+        const preLink = `${baseUrl}#/form/pre/${ev.studentId}`;
+        const msg = buildReminderMsg(st.name, ev, '30 minutos', preLink, settings?.trainerName);
+        openAutoReminderToast(`Lembrete 30min para ${st.name}`, st.phone, msg);
+      }
+    }
+
+    localStorage.setItem(storageKey, JSON.stringify(sent));
+  } catch(_) {}
+}
+
+function buildReminderMsg(studentFirstName, ev, antecedencia, preLink, trainerName) {
+  const nome   = studentFirstName.split(' ')[0];
+  const hora   = ev.time || '';
+  const data   = ev.date ? new Date(ev.date+'T12:00:00').toLocaleDateString('pt-BR',{weekday:'long',day:'numeric',month:'long'}) : '';
+  const treino = ev.workoutName || 'Treino';
+
+  return `🏋️ *Personal PRO*\n\n` +
+    `Olá ${nome}! 👋\n\n` +
+    `⏰ Seu treino começa em *${antecedencia}*:\n\n` +
+    `📋 *${treino}*\n` +
+    `📅 ${data}${hora ? ` às *${hora}*` : ''}\n\n` +
+    `📝 *Preencha o check-in antes de chegar:*\n${preLink}\n\n` +
+    `Leva menos de 1 minuto e ajuda a personalizar seu treino de hoje! 💪\n\n` +
+    (trainerName ? `_Personal: ${trainerName}_` : '_Personal PRO_');
+}
+
+function openAutoReminderToast(title, phone, msg) {
+  // Notificação visual no sistema + abre WA automaticamente
+  const waUrl = `https://wa.me/${phone.replace(/\D/g,'')}?text=${encodeURIComponent(msg)}`;
+
+  // Mostrar toast de confirmação antes de abrir o WA
+  const toastId = `reminder_${Date.now()}`;
+  const toast   = document.createElement('div');
+  toast.id      = toastId;
+  toast.style.cssText = [
+    'position:fixed;bottom:24px;right:24px;z-index:9999',
+    'background:var(--bg-card);border:1px solid var(--border-active)',
+    'border-left:4px solid #25d366;border-radius:12px',
+    'padding:14px 18px;box-shadow:0 8px 32px rgba(0,0,0,0.3)',
+    'max-width:340px;animation:slideInRight 0.3s ease',
+    'display:flex;flex-direction:column;gap:8px',
+  ].join(';');
+  toast.innerHTML = `
+    <div style="display:flex;align-items:center;gap:8px;font-size:0.88rem;font-weight:600">
+      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="#25d366"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+      <span>${title}</span>
+    </div>
+    <div style="font-size:0.78rem;color:var(--text-muted);line-height:1.4">Lembrete automático pronto para enviar via WhatsApp</div>
+    <div style="display:flex;gap:6px">
+      <button onclick="window.open('${waUrl}','_blank');document.getElementById('${toastId}')?.remove()"
+        style="flex:1;padding:7px;background:#25d366;color:white;border:none;border-radius:7px;cursor:pointer;font-size:0.8rem;font-weight:600">
+        Enviar WA
+      </button>
+      <button onclick="document.getElementById('${toastId}')?.remove()"
+        style="padding:7px 12px;background:var(--bg-page);border:1px solid var(--border-color);border-radius:7px;cursor:pointer;font-size:0.78rem;color:var(--text-muted)">
+        Ignorar
+      </button>
+    </div>`;
+
+  document.body.appendChild(toast);
+
+  // Auto-remover após 60s se não interagido
+  setTimeout(() => { document.getElementById(toastId)?.remove(); }, 60_000);
 }
