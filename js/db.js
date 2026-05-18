@@ -327,9 +327,10 @@ class Database {
     const methods = [
       // Força / Hipertrofia
       { name: 'Drop-set',       category: 'Hipertrofia', description: 'Executar até a falha, reduzir carga ~20% e continuar sem descanso. Repetir 2-3x.', sets: '3+drops', repsHint: '8-12 + drops', restHint: '120-180s entre drop-sets completos' },
-      { name: 'Pirâmide Crescente', category: 'Força',   description: 'Aumentar carga a cada série, reduzir reps: 12→10→8→6.', sets: '4', repsHint: '12→10→8→6', restHint: '90-120s' },
-      { name: 'Pirâmide Decrescente', category: 'Força', description: 'Iniciar pesado e reduzir carga a cada série: 6→8→10→12.', sets: '4', repsHint: '6→8→10→12', restHint: '90-120s' },
-      { name: 'Pirâmide Dupla',  category: 'Hipertrofia', description: 'Crescente depois decrescente: 12→10→8→10→12. Máximo volume.', sets: '5', repsHint: '12→10→8→10→12', restHint: '90s' },
+      { name: 'Pirâmide Crescente',  category: 'Força',        description: 'Aumentar carga a cada série, reduzir reps: 15→12→10→8. Boa para progressão de força.', sets: '4', repsHint: '15→12→10→8', restHint: '90-120s' },
+      { name: 'Pirâmide Decrescente',category: 'Força',        description: 'Inicia pesado e reduz carga: 8→10→12→15. Trabalha força e resistência na mesma sessão.', sets: '4', repsHint: '8→10→12→15', restHint: '90-120s' },
+      { name: 'Pirâmide Dupla',      category: 'Hipertrofia',  description: 'Crescente depois decrescente: 15→12→10→8→10→12→15. Máximo volume. Mais desgastante.', sets: '7', repsHint: '15→12→10→8→10→12→15', restHint: '90s' },
+      { name: 'Pirâmide Completa',   category: 'Hipertrofia',  description: 'Versão estendida com 10 séries: 20→15→12→10→8→6→8→10→12→15. Volume e intensidade máximos. Para avançados.', sets: '10', repsHint: '20→15→12→10→8→6→8→10→12→15', restHint: '90-120s' },
       { name: 'Rest-Pause',      category: 'Força',       description: 'Executar até a falha, descanso de 15-20s, continuar até nova falha. 2-3 mini-séries.', sets: '1-3', repsHint: 'Até a falha + pausa', restHint: '15-20s entre mini-séries' },
       { name: 'Super-série Agonista', category: 'Hipertrofia', description: 'Dois exercícios do mesmo grupo muscular sem descanso. Ex: Supino + Crucifixo.', sets: '3', repsHint: '10-12 cada', restHint: '90s após o par' },
       { name: 'Super-série Antagonista', category: 'Hipertrofia', description: 'Dois exercícios de grupos opostos sem descanso. Ex: Rosca + Tríceps.', sets: '3', repsHint: '10-12 cada', restHint: '60s após o par' },
