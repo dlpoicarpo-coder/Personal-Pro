@@ -365,6 +365,57 @@ class Database {
       }
     }
   }
+
+
+  // ── GLOBAL DATA (admin defaults — visible to all) ──
+  // Exercícios/métodos/templates com is_default=true são globais
+  // Não filtrados por trainer_id
+  async getGlobal(storeName) {
+    if (this.supabase) {
+      try {
+        const { data, error } = await this.supabase
+          .from(storeName)
+          .select('data')
+          .eq('is_default', true);
+        if (!error && data?.length) return data.map(r => r.data);
+      } catch(_) {}
+    }
+    // Fallback: LocalStorage global (sem trainer_id)
+    try {
+      const raw = localStorage.getItem(`pp_global_${storeName}`);
+      return raw ? JSON.parse(raw) : [];
+    } catch { return []; }
+  }
+
+  // ── GET ALL (user data + global defaults merged) ──
+  async getAllWithGlobal(storeName) {
+    const [userItems, globalItems] = await Promise.all([
+      this.getAll(storeName),
+      this.getGlobal(storeName),
+    ]);
+    // Merge: globais primeiro, depois os do usuário (sem duplicar ids)
+    const userIds = new Set(userItems.map(i => i.id));
+    const merged  = [...globalItems.filter(g => !userIds.has(g.id)), ...userItems];
+    return merged;
+  }
+
+  // ── SEED GLOBAL DEFAULTS (admin only) ──
+  async seedGlobalDefaults(storeName, items) {
+    const marked = items.map(item => ({ ...item, is_default: true }));
+    if (this.supabase) {
+      try {
+        for (const item of marked) {
+          if (!item.id) item.id = crypto.randomUUID();
+          await this.supabase.from(storeName).upsert({ id: item.id, is_default: true, data: item });
+        }
+        return;
+      } catch(_) {}
+    }
+    localStorage.setItem(`pp_global_${storeName}`, JSON.stringify(marked));
+  }
+
+
+
 }
 
 const db = new Database();
