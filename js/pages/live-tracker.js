@@ -7,6 +7,7 @@ import { Calc } from '../utils/calculations.js';
 import { Timer, formatTime, formatTimeHMS } from '../components/timer.js';
 import { notify } from '../components/toast.js';
 import { openModal, closeModal } from '../components/modal.js';
+import { buildMsgPostTreino } from './calendar.js';
 
 // ── STATE ────────────────────────────────────────────────────
 const state = {
@@ -213,19 +214,37 @@ function renderLiveView(students) {
               const isActive = !done && i === state.setIdx;
               const repsVal  = done ? done.reps : (String(ex.reps || '')).replace(/[^0-9]/g, '') || 12;
               const loadVal  = done ? done.load : ex.load || '';
-              const pseVal   = done ? done.pse : '';
+              const pseVal   = done ? done.pse  : '';
+              const rirVal   = done && done.rir != null ? done.rir : '';
               return `
               <div class="set-row ${done ? 'set-done' : ''} ${isActive ? 'set-active' : ''}" data-si="${i}"
-                style="display:flex;align-items:center;gap:8px;padding:8px;border-radius:8px;
+                style="display:flex;align-items:center;gap:7px;padding:8px;border-radius:8px;
                 background:${isActive ? 'rgba(16,185,129,0.08)' : done ? 'rgba(16,185,129,0.04)' : 'var(--bg-page)'}">
-                <span style="font-size:0.85rem;font-weight:700;min-width:20px;
+                <span style="font-size:0.85rem;font-weight:700;min-width:18px;
                   color:${done ? 'var(--success)' : isActive ? 'var(--primary)' : 'var(--text-muted)'}">${i + 1}</span>
-                <input class="form-input set-reps" style="width:62px;text-align:center;padding:4px 6px" type="number" placeholder="Reps" value="${repsVal}" ${done ? 'disabled' : ''} />
-                <input class="form-input set-load" style="width:70px;text-align:center;padding:4px 6px" type="number" step="0.5" placeholder="kg" value="${loadVal}" ${done ? 'disabled' : ''} />
-                <input class="form-input set-pse" style="width:52px;text-align:center;padding:4px 6px" type="number" min="1" max="10" placeholder="PSE" value="${pseVal}" ${done ? 'disabled' : ''} />
+                <div style="display:flex;flex-direction:column;gap:1px;align-items:center">
+                  <span style="font-size:0.55rem;color:var(--text-muted)">Reps</span>
+                  <input class="form-input set-reps" style="width:58px;text-align:center;padding:4px 5px;font-size:0.9rem;font-weight:600" type="number" placeholder="—" value="${repsVal}" ${done ? 'disabled' : ''} />
+                </div>
+                <div style="display:flex;flex-direction:column;gap:1px;align-items:center">
+                  <span style="font-size:0.55rem;color:var(--text-muted)">kg</span>
+                  <input class="form-input set-load" style="width:66px;text-align:center;padding:4px 5px;font-size:0.9rem;font-weight:600" type="number" step="0.5" placeholder="—" value="${loadVal}" ${done ? 'disabled' : ''} />
+                </div>
+                <div style="display:flex;flex-direction:column;gap:1px;align-items:center" title="PSE — Percepção Subjetiva de Esforço (1=muito leve, 10=máximo)">
+                  <span style="font-size:0.55rem;color:var(--warning)">PSE</span>
+                  <input class="form-input set-pse" style="width:46px;text-align:center;padding:4px 5px;font-size:0.9rem;border-color:rgba(245,158,11,0.3)" type="number" min="1" max="10" placeholder="—" value="${pseVal}" ${done ? 'disabled' : ''} />
+                </div>
+                <div style="display:flex;flex-direction:column;gap:1px;align-items:center" title="RIR — Reps in Reserve: quantas repetições ainda sobravam no tanque (0=falha, 1=1 rep sobrando...)">
+                  <span style="font-size:0.55rem;color:var(--accent);font-weight:600">RIR</span>
+                  <input class="form-input set-rir" style="width:42px;text-align:center;padding:4px 5px;font-size:0.9rem;border-color:rgba(6,182,212,0.4)" type="number" min="0" max="10" placeholder="—" value="${rirVal}" ${done ? 'disabled' : ''} />
+                </div>
                 ${done
-                  ? `<span class="badge badge-success" style="min-width:32px;text-align:center">✓</span>`
-                  : `<button class="btn btn-primary btn-sm do-set" data-i="${i}" style="min-width:36px">✓</button>`}
+                  ? `<div style="display:flex;flex-direction:column;align-items:center;gap:1px;min-width:38px">
+                      ${done.pse ? `<span style="font-size:0.6rem;color:var(--warning)">PSE ${done.pse}</span>` : ''}
+                      <span class="badge badge-success" style="text-align:center;font-size:0.72rem;padding:2px 6px">✓</span>
+                      ${done.rir != null ? `<span style="font-size:0.6rem;color:var(--accent)">RIR ${done.rir}</span>` : ''}
+                    </div>`
+                  : `<button class="btn btn-primary btn-sm do-set" data-i="${i}" style="min-width:36px;align-self:flex-end">✓</button>`}
               </div>`;
             }).join('')}
           </div>
@@ -589,12 +608,27 @@ export function initTracker(navigateFn) {
     btn.addEventListener('click', () => {
       const i    = parseInt(btn.dataset.i);
       const row  = btn.closest('.set-row');
-      const reps = parseInt(row.querySelector('.set-reps')?.value) || 0;
-      const load = parseFloat(row.querySelector('.set-load')?.value) || 0;
-      const pse  = parseInt(row.querySelector('.set-pse')?.value) || 0;
+      const reps  = parseInt(row.querySelector('.set-reps')?.value) || 0;
+      const load  = parseFloat(row.querySelector('.set-load')?.value) || 0;
+      const pse   = parseInt(row.querySelector('.set-pse')?.value) || 0;
+      const rirEl = row.querySelector('.set-rir');
+      const rir   = rirEl?.value !== '' ? parseInt(rirEl.value) : null;
       const notes = document.getElementById('setNotes')?.value || '';
 
-      state.setLog.push({ exIdx: state.exIdx, setIdx: i, reps, load, pse, notes, time: Date.now() });
+      // Validação: avisar se PSE ou RIR estão inconsistentes
+      // RIR 0 com PSE < 8 é incomum — lembrete discreto
+      if (rir === 0 && pse > 0 && pse < 7) {
+        notify.warning('RIR 0 (falha) com PSE baixo — verifique os valores.');
+      }
+
+      // Estimativa de 1RM se tiver carga e reps
+      const ex = (state.session?.exercises || [])[state.exIdx] || {};
+      let rm1Estimated = null;
+      if (load > 0 && reps > 0 && reps <= 12) {
+        rm1Estimated = Math.round((load * (1 + reps / 30)) * 2) / 2; // Epley
+      }
+
+      state.setLog.push({ exIdx: state.exIdx, setIdx: i, reps, load, pse, rir, notes, rm1Estimated, time: Date.now() });
 
       row.classList.add('set-done'); row.classList.remove('set-active');
       row.style.background = 'rgba(16,185,129,0.04)';
@@ -681,8 +715,9 @@ export function initTracker(navigateFn) {
             <label class="form-label">Observações</label>
             <textarea class="form-textarea" name="notes" rows="2" placeholder="Como foi o treino?"></textarea>
           </div>
-          <div style="border-top:1px solid var(--border-color);padding-top:8px">
-            <button type="button" class="btn btn-ghost btn-sm" id="genPostLink" style="width:100%;font-size:0.8rem">Gerar link pós-treino para o aluno</button>
+          <div style="padding:8px 10px;background:rgba(37,211,102,0.07);border-radius:8px;border:1px solid rgba(37,211,102,0.2);font-size:0.75rem;color:var(--text-muted)">
+            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="#25d366" style="vertical-align:-1px;margin-right:4px"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+            O formulário pós-treino será enviado automaticamente ao aluno via WhatsApp ao salvar.
           </div>
         </form>`,
       actions: [
@@ -700,13 +735,6 @@ export function initTracker(navigateFn) {
       ]
     });
 
-    setTimeout(() => {
-      document.getElementById('genPostLink')?.addEventListener('click', async () => {
-        if (!state.session) return;
-        const url = `${window.location.origin}${window.location.pathname}#/form/post/${state.session.id}`;
-        navigator.clipboard?.writeText(url);
-        notify.success('Link pós-treino copiado!');
-      });
     }, 200);
   });
 }
@@ -736,7 +764,20 @@ async function finishSession(dur, vol, dens, post, navigateFn) {
 
   const students = await db.getAll('students');
   const student  = students.find(x => x.id === s.studentId);
-  const summary  = buildSessionSummary(sessionData, student);
+
+  // ── Enviar formulário pós-treino automaticamente via WhatsApp ─
+  if (student?.phone) {
+    try {
+      const settings = await db.get('settings','trainer').catch(()=>({}));
+      const base     = window.location.href.split('#')[0];
+      const { msg }  = buildMsgPostTreino(student.name, sessionData.id || s.id, base, settings?.trainerName);
+      const num      = student.phone.replace(/\D/g,'');
+      const waNum    = num.startsWith('55') ? num : '55'+num;
+      window.open(`https://wa.me/${waNum}?text=${encodeURIComponent(msg)}`, '_blank', 'noopener,noreferrer');
+    } catch(_) {}
+  }
+
+  const summary = buildSessionSummary(sessionData, student);
   resetState();
   closeModal(() => { notify.success('Sessão salva!'); showSessionSummary(summary, sessionData, student, navigateFn); });
 }
@@ -758,39 +799,92 @@ function showSessionSummary(summaryText, session, student, navigateFn) {
   const durMin = Math.round((session.totalDuration||0)/60);
   const exs    = session.exercises||[];
   const setLog = session.setLog||[];
+  const ini    = (student?.name||'?').split(' ').filter(Boolean).map(n=>n[0]).slice(0,2).join('').toUpperCase();
 
   const exRows = exs.map((ex,i) => {
     const sets = setLog.filter(l=>l.exIdx===i);
-    if (!sets.length) return `<tr style="opacity:0.4"><td>${ex.name}</td><td colspan="4">Não realizado</td></tr>`;
-    const maxLoad=Math.max(...sets.map(s=>s.load||0));
-    const totalReps=sets.reduce((t,s)=>t+(s.reps||0),0);
-    const vol=sets.reduce((t,s)=>t+((s.reps||0)*(s.load||0)),0);
-    return `<tr><td><strong>${ex.name}</strong></td><td>${sets.length}</td><td>${totalReps}</td><td>${maxLoad}kg</td><td>${vol}kg</td></tr>`;
+    if (!sets.length) return `<tr style="opacity:0.4"><td colspan="7">${ex.name} — não realizado</td></tr>`;
+    const maxLoad   = Math.max(...sets.map(s=>s.load||0));
+    const totalReps = sets.reduce((t,s)=>t+(s.reps||0),0);
+    const vol       = sets.reduce((t,s)=>t+((s.reps||0)*(s.load||0)),0);
+    const avgPse    = sets.filter(s=>s.pse).length
+      ? (sets.reduce((t,s)=>t+(s.pse||0),0)/sets.filter(s=>s.pse).length).toFixed(1) : '—';
+    const avgRir    = sets.filter(s=>s.rir!=null).length
+      ? (sets.reduce((t,s)=>t+(s.rir??0),0)/sets.filter(s=>s.rir!=null).length).toFixed(1) : '—';
+    const rm1Est    = sets.find(s=>s.rm1Estimated)?.rm1Estimated;
+
+    // Linhas de sub-séries
+    const setDetail = sets.map(s=>
+      `<div style="font-size:0.7rem;color:var(--text-muted);padding-left:8px">
+        S${s.setIdx+1}: <strong style="color:var(--text-primary)">${s.reps}×${s.load}kg</strong>
+        ${s.pse?`<span style="color:var(--warning)"> PSE ${s.pse}</span>`:''}
+        ${s.rir!=null?`<span style="color:var(--accent)"> RIR ${s.rir}</span>`:''}
+      </div>`).join('');
+
+    return `
+      <tr>
+        <td>
+          <strong style="font-size:0.85rem">${ex.name}</strong>
+          ${ex.method?`<div style="font-size:0.68rem;color:var(--accent)">${ex.method}</div>`:''}
+          <div id="setDetail_${i}" style="display:none">${setDetail}</div>
+          <button onclick="const d=document.getElementById('setDetail_${i}');d.style.display=d.style.display==='none'?'':'none'"
+            style="font-size:0.65rem;color:var(--primary);background:none;border:none;cursor:pointer;padding:1px 0">
+            ▸ séries
+          </button>
+        </td>
+        <td style="text-align:center">${sets.length}</td>
+        <td style="text-align:center">${totalReps}</td>
+        <td style="text-align:center;font-weight:600">${maxLoad}kg</td>
+        <td style="text-align:center;color:var(--primary)">${vol}kg</td>
+        <td style="text-align:center;color:var(--warning)">${avgPse}</td>
+        <td style="text-align:center;color:var(--accent)">${avgRir}</td>
+        ${rm1Est?`<td style="text-align:center;color:var(--success);font-weight:600">${rm1Est}kg</td>`:`<td style="text-align:center;color:var(--text-muted)">—</td>`}
+      </tr>`;
   }).join('');
 
   openModal({
-    title: 'Resumo da Sessão', size: 'lg',
+    title: 'Resumo da Sessão', size: 'xl',
     content: `
       <div style="background:var(--bg-page);border-radius:10px;padding:16px;margin-bottom:16px">
         <div class="flex items-center gap-md mb-md">
-          <div class="avatar">${student?.name?.[0]||'?'}</div>
+          <div class="avatar">${ini}</div>
           <div>
             <div style="font-weight:700;font-size:1.05rem">${student?.name||'Aluno'}</div>
             <div class="text-muted text-sm">${session.workoutName||'Treino'} · ${new Date(session.date).toLocaleDateString('pt-BR')}</div>
           </div>
         </div>
-        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">
-          ${[['Duração',durMin+'min','var(--primary)'],['Volume',(session.totalVolume||0)+'kg','var(--primary)'],['Séries',String(session.totalSets||0),'var(--primary)'],['PSE',String(session.postBiofeedback?.pse||'-'),(session.postBiofeedback?.pse||7)>8?'var(--danger)':'var(--success)']].map(([l,v,c])=>`
+        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px">
+          ${[
+            ['Duração',      durMin+'min',                           'var(--primary)'],
+            ['Volume',       Math.round(session.totalVolume||0)+'kg','var(--primary)'],
+            ['Séries',       String(session.totalSets||0),           'var(--primary)'],
+            ['PSE Final',    String(session.postBiofeedback?.pse||'—'),
+              (session.postBiofeedback?.pse||0)>8?'var(--danger)':(session.postBiofeedback?.pse||0)>6?'var(--warning)':'var(--success)'],
+            ['Satisfação',   String(session.postBiofeedback?.satisfaction||'—')+'★','var(--accent)'],
+          ].map(([l,v,c])=>`
             <div style="text-align:center;padding:10px;background:var(--bg-card);border-radius:8px">
-              <div style="font-size:0.65rem;text-transform:uppercase;letter-spacing:0.07em;color:var(--text-muted)">${l}</div>
-              <div style="font-size:1.3rem;font-weight:700;color:${c};margin-top:2px">${v}</div>
+              <div style="font-size:0.6rem;text-transform:uppercase;letter-spacing:0.07em;color:var(--text-muted)">${l}</div>
+              <div style="font-size:1.2rem;font-weight:700;color:${c};margin-top:2px">${v}</div>
             </div>`).join('')}
         </div>
       </div>
-      <table class="data-table" style="font-size:0.82rem">
-        <thead><tr><th>Exercício</th><th>Séries</th><th>Reps</th><th>Carga máx</th><th>Volume</th></tr></thead>
-        <tbody>${exRows}</tbody>
-      </table>
+      <div style="margin-bottom:6px;display:flex;gap:16px;font-size:0.68rem;color:var(--text-muted)">
+        <span style="color:var(--warning)">■ PSE = Percepção de esforço (1-10)</span>
+        <span style="color:var(--accent)">■ RIR = Reps in Reserve (0=falha, 3=3 reps sobrando)</span>
+        <span style="color:var(--success)">■ 1RM = Estimativa Epley</span>
+      </div>
+      <div class="table-container">
+        <table class="data-table" style="font-size:0.82rem">
+          <thead><tr>
+            <th>Exercício</th><th style="text-align:center">Séries</th><th style="text-align:center">Reps</th>
+            <th style="text-align:center">Carga máx</th><th style="text-align:center">Volume</th>
+            <th style="text-align:center;color:var(--warning)">PSE</th>
+            <th style="text-align:center;color:var(--accent)">RIR</th>
+            <th style="text-align:center;color:var(--success)">1RM Est.</th>
+          </tr></thead>
+          <tbody>${exRows}</tbody>
+        </table>
+      </div>
       ${session.postBiofeedback?.notes?`<p class="text-sm text-muted mt-md">Obs: ${session.postBiofeedback.notes}</p>`:''}
     `,
     actions: [
