@@ -3,7 +3,7 @@
 // Visível apenas para usuários com role=admin
 // ========================================
 import db from '../db.js';
-import { isAdmin } from '../utils/roles.js';
+import { isadmin } from '../utils/roles.js';
 import { notify } from '../components/toast.js';
 import { Calc } from '../utils/calculations.js';
 
@@ -12,7 +12,7 @@ const ICON_EDIT  = `<svg xmlns="http://www.w3.org/2000/svg" width="13" height="1
 
 export async function renderAdmin() {
   // Redirecionar se não for admin
-  if (!(await isAdmin())) {
+  if (!(await isadmin())) {
     return `
       <div class="page">
         <div class="empty-state" style="padding:80px 40px">
@@ -238,7 +238,7 @@ export async function renderAdmin() {
   `;
 }
 
-export function initAdmin(navigateFn) {
+export function initadmin(navigateFn) {
   // Tabs
   document.querySelectorAll('#adminTabs .tab').forEach(tab => {
     tab.addEventListener('click', () => {
