@@ -517,7 +517,7 @@ function bindAddEvent(navigateFn) {
 // Salva no localStorage quais lembretes já foram enviados (por id+tipo)
 // para não disparar duas vezes na mesma sessão/dia
 // ─────────────────────────────────────────────────────────────
-function initAutoReminders() {
+export function initAutoReminders() {
   // Evita duplicar o intervalo se a página for reconstruída
   if (window._ppReminderInterval) clearInterval(window._ppReminderInterval);
   checkReminders(); // rodar imediatamente
