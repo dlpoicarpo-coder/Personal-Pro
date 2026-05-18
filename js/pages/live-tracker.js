@@ -93,22 +93,22 @@ export async function renderTracker() {
       <div class="card">
         <div class="card-header">
           <span class="card-title">Check-in Pré-Treino</span>
-          <button class="btn btn-ghost btn-sm" id="genPreLinkBtn">Link para aluno</button>
+          <button class="btn btn-ghost btn-sm" id="genPreLinkBtn">
+            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+            Link para aluno
+          </button>
         </div>
-        <p class="text-xs text-muted mb-sm">Preencha ou gere link para o aluno responder</p>
-        ${['sleep|Sono|Como dormiu?','mood|Disposição|Como está hoje?','energy|Energia|Nível de energia','stress|Estresse|Nível de estresse','pain|Dor|Sente alguma dor?'].map(f => {
-          const [n, l, desc] = f.split('|');
-          return `
-          <div class="form-group" style="margin-bottom:10px">
-            <div class="flex items-center justify-between">
-              <label class="form-label" style="margin:0" title="${desc}">${l}</label>
-              <span style="font-size:1.1rem;font-weight:700;color:var(--primary);min-width:20px;text-align:right" id="preVal_${n}">5</span>
-            </div>
-            <input type="range" min="1" max="10" value="5" id="pre_${n}" style="width:100%;accent-color:var(--primary)"
-              oninput="document.getElementById('preVal_${n}').textContent=this.value" />
-            <div class="flex justify-between text-xs text-muted" style="margin-top:2px"><span>1</span><span>10</span></div>
-          </div>`;
-        }).join('')}
+        <div id="preBioStatus" style="padding:12px;background:rgba(16,185,129,0.06);border-radius:8px;border:1px solid rgba(16,185,129,0.15);text-align:center">
+          <div style="font-size:0.82rem;color:var(--text-muted);margin-bottom:6px">O check-in é preenchido pelo aluno via link</div>
+          <div id="preBioLoaded" style="display:none">
+            <div style="font-size:0.75rem;font-weight:600;color:var(--success);margin-bottom:6px">✓ Dados do aluno carregados</div>
+            <div id="preBioValues" style="display:flex;flex-wrap:wrap;gap:6px;justify-content:center;font-size:0.72rem"></div>
+          </div>
+          <div id="preBioEmpty">
+            <div style="font-size:0.78rem;color:var(--text-muted)">Aguardando check-in do aluno</div>
+            <div style="font-size:0.68rem;color:var(--text-muted);margin-top:3px">Envie o link via WhatsApp para o aluno preencher antes de chegar</div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -329,15 +329,76 @@ export function initTracker(navigateFn) {
   if (sSel) {
     sSel.addEventListener('change', async () => {
       const sid = sSel.value;
-      if (!sid) { wSel.disabled = true; wSel.innerHTML = '<option>Selecione o aluno primeiro</option>'; sBtn.disabled = true; return; }
+      if (!sid) {
+        wSel.disabled = true;
+        wSel.innerHTML = '<option>Selecione o aluno primeiro</option>';
+        sBtn.disabled = true;
+        resetPreBioStatus();
+        return;
+      }
       const wks = (await db.getAll('workouts'))
         .filter(w => w.studentId === sid)
         .sort((a, b) => new Date(b.date) - new Date(a.date));
       wSel.disabled = false;
       wSel.innerHTML = '<option value="">Selecione o treino</option>' +
         wks.map(w => `<option value="${w.id}">${w.name}${w.phase ? ' — ' + w.phase : ''} (${Calc.formatDate(w.date)})</option>`).join('');
+      // Verificar se aluno já fez check-in hoje
+      await checkPreBioStatus(sid);
     });
-    wSel?.addEventListener('change', () => { sBtn.disabled = !wSel.value; });
+    wSel?.addEventListener('change', async () => {
+      sBtn.disabled = !wSel.value;
+      if (wSel.value) {
+        const wk = await db.get('workouts', wSel.value);
+        if (wk?.studentId) await checkPreBioStatus(wk.studentId);
+      }
+    });
+
+    // Função para verificar e exibir status do check-in do aluno
+    async function checkPreBioStatus(sid) {
+      const allBf   = await db.getAll('biofeedback');
+      const todayPre = allBf.find(f =>
+        f.studentId === sid &&
+        f.formType === 'pre' &&
+        new Date(f.date).toDateString() === new Date().toDateString()
+      );
+      const statusEl  = document.getElementById('preBioStatus');
+      const loadedEl  = document.getElementById('preBioLoaded');
+      const emptyEl   = document.getElementById('preBioEmpty');
+      const valuesEl  = document.getElementById('preBioValues');
+      if (!statusEl) return;
+      if (todayPre) {
+        statusEl.style.borderColor = 'rgba(16,185,129,0.4)';
+        statusEl.style.background  = 'rgba(16,185,129,0.08)';
+        if (loadedEl) loadedEl.style.display = '';
+        if (emptyEl)  emptyEl.style.display  = 'none';
+        if (valuesEl) {
+          const vals = [
+            ['Sono',       todayPre.sleep,  false],
+            ['Disp',       todayPre.mood,   false],
+            ['Energia',    todayPre.energy, false],
+            ['Estresse',   todayPre.stress, true],
+            ['Dor',        todayPre.pain,   true],
+          ];
+          valuesEl.innerHTML = vals.map(([l,v,inv])=>`
+            <span style="padding:3px 8px;border-radius:12px;background:var(--bg-page);border:1px solid var(--border-color);color:${
+              v==null?'var(--text-muted)':inv?(v>=7?'var(--danger)':v>=5?'var(--warning)':'var(--success)'):(v<=3?'var(--danger)':v<=5?'var(--warning)':'var(--success)')
+            }">
+              ${l} <strong>${v??'—'}</strong>
+            </span>`).join('');
+        }
+      } else {
+        resetPreBioStatus();
+      }
+    }
+
+    function resetPreBioStatus() {
+      const statusEl = document.getElementById('preBioStatus');
+      const loadedEl = document.getElementById('preBioLoaded');
+      const emptyEl  = document.getElementById('preBioEmpty');
+      if (statusEl) { statusEl.style.borderColor=''; statusEl.style.background=''; }
+      if (loadedEl) loadedEl.style.display = 'none';
+      if (emptyEl)  emptyEl.style.display  = '';
+    }
 
     const autoData = sessionStorage.getItem('pp_autostart');
     if (autoData) {
@@ -370,11 +431,24 @@ export function initTracker(navigateFn) {
   sBtn?.addEventListener('click', async () => {
     const wk = await db.get('workouts', wSel.value);
     if (!wk) return;
-    const preBf = {};
-    ['sleep','mood','energy','stress','pain'].forEach(k => { preBf[k] = parseInt(document.getElementById(`pre_${k}`)?.value) || 5; });
+    const preBf = { sleep:5, mood:5, energy:5, stress:5, pain:0 }; // defaults neutros
+    // Carregar check-in do aluno (formulário enviado pelo aluno via link)
     const allBf = await db.getAll('biofeedback');
-    const todayPre = allBf.find(f => f.studentId === wk.studentId && f.formType === 'pre' && new Date(f.date).toDateString() === new Date().toDateString());
-    if (todayPre) { Object.assign(preBf, { sleep: todayPre.sleep, mood: todayPre.mood, energy: todayPre.energy, stress: todayPre.stress, pain: todayPre.pain }); notify.success('Dados pré-treino do aluno carregados!'); }
+    const todayPre = allBf.find(f =>
+      f.studentId === wk.studentId &&
+      f.formType === 'pre' &&
+      new Date(f.date).toDateString() === new Date().toDateString()
+    );
+    if (todayPre) {
+      Object.assign(preBf, {
+        sleep:  todayPre.sleep,
+        mood:   todayPre.mood,
+        energy: todayPre.energy,
+        stress: todayPre.stress,
+        pain:   todayPre.pain,
+      });
+      notify.success('Dados pré-treino do aluno carregados!');
+    }
     const session = { studentId: wk.studentId, workoutId: wk.id, workoutName: wk.name, exercises: JSON.parse(JSON.stringify(wk.exercises || [])), date: new Date().toISOString(), startTime: Date.now(), status: 'running', soundEnabled: document.getElementById('trkSound')?.checked !== false, preBiofeedback: preBf, setLog: [] };
     const saved = await db.add('sessions', session);
     resetState();
