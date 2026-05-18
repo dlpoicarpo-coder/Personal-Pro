@@ -59,9 +59,9 @@ export async function renderWorkouts() {
     </div>
 
     <div class="flex gap-sm mb-md" style="flex-wrap:wrap;align-items:center">
-      <div style="position:relative;flex:1;min-width:200px">
-        <svg style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text-muted)" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-        <input type="text" id="workoutSearch" class="form-input" placeholder="Buscar treino..." style="padding-left:32px" />
+      <div style="position:relative;width:180px">
+        <svg style="position:absolute;left:9px;top:50%;transform:translateY(-50%);color:var(--text-muted)" xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="text" id="workoutSearch" class="form-input" placeholder="Buscar..." style="padding-left:28px;font-size:0.82rem" />
       </div>
       <div class="tabs" id="workoutTabs" style="margin-bottom:0">
         <button class="tab active" data-filter="all">Todos</button>
