@@ -19,6 +19,7 @@ const MENU_ITEMS = [
   { id: 'anamnesis', icon: 'assessments', label: 'Anamnese', path: '/anamnese' },
   { id: 'tutorial', icon: 'weekly', label: 'Tutorial', path: '/tutorial' },
   { id: 'settings', icon: 'settings', label: 'Configurações', path: '/config' },
+  { id: 'admin', icon: 'admin', label: 'Admin', path: '/admin', adminOnly: true },
 ];
 
 export function renderSidebar(currentPath) {
@@ -43,10 +44,12 @@ export function renderSidebar(currentPath) {
              class="sidebar-link ${currentPath === item.path ? 'active' : ''} ${item.highlight ? 'sidebar-link-highlight' : ''}" 
              data-page="${item.id}"
              id="nav-${item.id}"
-             title="${item.label}">
+             title="${item.label}"
+             ${item.adminOnly ? 'style="display:none"' : ''}>
             <span class="sidebar-icon-svg">${ICONS[item.icon] || '•'}</span>
             <span class="sidebar-label">${item.label}</span>
             ${item.highlight ? '<span class="live-dot"></span>' : ''}
+            ${item.adminOnly ? '<span style="font-size:0.6rem;background:rgba(239,68,68,0.15);color:var(--danger);padding:1px 5px;border-radius:8px;margin-left:4px">Admin</span>' : ''}
           </a>
         `).join('')}
       </nav>
@@ -57,7 +60,7 @@ export function renderSidebar(currentPath) {
             <div class="avatar avatar-sm" id="trainerAvatar">PRO</div>
             <div class="sidebar-user-info">
               <span class="sidebar-user-name" id="trainerName">Treinador</span>
-              <span class="sidebar-user-role">Personal Trainer</span>
+              <span id="roleBadge" style="font-size:0.65rem;padding:1px 7px;border-radius:8px;font-weight:600;background:rgba(16,185,129,0.15);color:var(--primary)">Personal</span>
             </div>
           </div>
           <div style="display:flex;align-items:center;gap:4px">
