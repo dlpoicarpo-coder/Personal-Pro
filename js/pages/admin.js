@@ -208,6 +208,19 @@ export async function renderAdmin() {
                 <strong>${v}</strong>
               </div>`).join('')}
           </div>
+          <div style="border-top:1px solid var(--border-color);padding-top:14px;margin-top:14px">
+            <div class="text-xs text-muted mb-sm" style="font-weight:600;text-transform:uppercase;letter-spacing:0.06em">Ações de Manutenção</div>
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <button class="btn btn-secondary btn-sm" id="reseedDefaultsBtn" style="text-align:left;justify-content:flex-start">
+                🔄 Marcar todos exercícios/métodos como Padrão
+                <div style="font-size:0.7rem;color:var(--text-muted);margin-top:2px">Útil se os itens existentes ainda mostram "0 padrão"</div>
+              </button>
+              <button class="btn btn-secondary btn-sm" id="reseedExercisesBtn" style="text-align:left;justify-content:flex-start">
+                📦 Re-executar seed de exercícios e métodos
+                <div style="font-size:0.7rem;color:var(--text-muted);margin-top:2px">Adiciona exercícios/métodos padrão que estejam faltando</div>
+              </button>
+            </div>
+          </div>
         </div>
 
         <div class="card">
@@ -247,6 +260,36 @@ export function initAdmin(navigateFn) {
       document.querySelectorAll('.admin-panel').forEach(p=>p.style.display='none');
       document.getElementById(`tab-${tab.dataset.tab}`)?.style.setProperty('display','');
     });
+  });
+
+  // ── Marcar todos como padrão ─────────────────────────────────
+  document.getElementById('reseedDefaultsBtn')?.addEventListener('click', async () => {
+    if (!window.confirm('Marcar TODOS os exercícios e métodos atuais como is_default=true?\nEsta ação é segura e pode ser revertida item a item.')) return;
+    const btn = document.getElementById('reseedDefaultsBtn');
+    btn.disabled = true; btn.textContent = 'Processando...';
+    try {
+      const result = await db.reseedDefaults();
+      notify.success(`✓ ${result.exercises} exercícios e ${result.methods} métodos marcados como padrão!`);
+      navigateFn('/admin');
+    } catch(e) {
+      notify.error('Erro ao marcar padrões: ' + e.message);
+      btn.disabled = false;
+    }
+  });
+
+  // ── Re-executar seed completo ─────────────────────────────────
+  document.getElementById('reseedExercisesBtn')?.addEventListener('click', async () => {
+    if (!window.confirm('Re-executar o seed de exercícios e métodos?\nExercícios/métodos existentes não serão duplicados.')) return;
+    const btn = document.getElementById('reseedExercisesBtn');
+    btn.disabled = true; btn.textContent = 'Executando seed...';
+    try {
+      await db.seedTemplates();
+      notify.success('Seed concluído! Exercícios e métodos padrão atualizados.');
+      navigateFn('/admin');
+    } catch(e) {
+      notify.error('Erro no seed: ' + e.message);
+      btn.disabled = false;
+    }
   });
 
   // Excluir exercício padrão
