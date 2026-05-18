@@ -9,7 +9,7 @@ import { renderStudents, initStudents } from './pages/students.js';
 import { renderWorkouts, initWorkouts } from './pages/workouts.js';
 import { renderTracker, initTracker } from './pages/live-tracker.js';
 import { renderReports, initReports } from './pages/reports.js';
-import { renderCalendar, initCalendar } from './pages/calendar.js';
+import { renderCalendar, initCalendar, initAutoReminders } from './pages/calendar.js';
 import { renderBiofeedback, initBiofeedback } from './pages/biofeedback.js';
 import { renderFinancial, initFinancial } from './pages/financial.js';
 import { renderAssessments, initAssessments } from './pages/assessments.js';
@@ -94,6 +94,8 @@ export async function navigateTo(rawPath) {
       </main>
     `;
     initSidebar(navigateTo);
+    // Iniciar sistema de lembretes automáticos WhatsApp
+    initAutoReminders();
     // Bind logout
     document.getElementById('logoutBtn')?.addEventListener('click', async () => {
       await signOut();
