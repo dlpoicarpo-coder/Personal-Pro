@@ -7,6 +7,31 @@ import { openModal, closeModal } from '../components/modal.js';
 import { notify } from '../components/toast.js';
 import { BUILT_IN_TEMPLATES, getTemplatesByCategory } from '../utils/workout-templates.js';
 
+// ── SISTEMA ADMIN / USUÁRIO ──────────────────────────────────
+// Exercícios DEFAULT (is_default=true) são somente-leitura
+// Visíveis para todos, não podem ser editados/excluídos por usuários comuns
+// Exercícios criados pelo usuário: apenas ele pode ver e modificar
+// Admin (is_admin=true no perfil) pode editar exercícios padrão
+
+async function isAdmin() {
+  try {
+    const { getCurrentUser } = await import('../utils/auth.js');
+    const user = await getCurrentUser();
+    return user?.user_metadata?.is_admin === true || user?.email?.endsWith('@personalpro.admin') || false;
+  } catch { return false; }
+}
+
+function canEdit(exercise, adminMode) {
+  if (exercise.is_default) return adminMode;  // exercícios padrão: só admin
+  return true; // exercícios do usuário: sempre editável
+}
+
+function canDelete(exercise, adminMode) {
+  if (exercise.is_default) return adminMode;
+  return true;
+}
+
+
 const MUSCLE_GROUPS = [
   'Peito','Costas','Ombros','Bíceps','Tríceps','Antebraço',
   'Quadríceps','Posterior','Glúteos','Panturrilha','Abdômen','Core',
@@ -111,7 +136,7 @@ export async function renderExercisesLibrary() {
                   style="padding:8px 10px;background:var(--bg-page);border-radius:8px;border:1px solid var(--border-color)">
                   <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:6px">
                     <div style="flex:1;min-width:0">
-                      <div style="font-weight:600;font-size:0.85rem;margin-bottom:2px">${ex.name}</div>
+                      <div style="font-weight:600;font-size:0.85rem;margin-bottom:2px">${ex.name}${ex.is_default ? '<span class="badge" style="margin-left:4px;background:rgba(99,102,241,0.12);color:#6366f1;font-size:0.6rem;padding:1px 5px">Padrão</span>' : ''}</div>
                       <div style="display:flex;gap:5px;align-items:center;flex-wrap:wrap">
                         <span style="font-size:0.63rem;color:var(--text-muted)">${ex.equipment||'-'}</span>
                         <span style="font-size:0.63rem;color:${LOAD_COLORS[lt]};font-weight:600">${LOAD_LABELS[lt]}</span>
@@ -121,8 +146,8 @@ export async function renderExercisesLibrary() {
                     </div>
                     <div style="display:flex;gap:2px;flex-shrink:0">
                       ${ex.videoUrl?`<a href="${ex.videoUrl}" target="_blank" class="btn btn-ghost btn-sm" style="padding:3px 5px;color:var(--danger)">${ICON_PLAY}</a>`:''}
-                      <button class="btn btn-ghost btn-sm edit-exercise" data-id="${ex.id}" style="padding:3px 5px;color:var(--text-muted)">${ICON_EDIT}</button>
-                      <button class="btn btn-ghost btn-sm delete-exercise" data-id="${ex.id}" style="padding:3px 5px;color:var(--danger)">${ICON_DEL}</button>
+                      <button class="btn btn-ghost btn-sm edit-exercise" data-id="${ex.id}" style="padding:3px 5px;color:var(--text-muted)">${ex.is_default ? "" : ICON_EDIT}</button>
+                      <button class="btn btn-ghost btn-sm delete-exercise" data-id="${ex.id}" style="padding:3px 5px;color:var(--danger)">${ex.is_default ? "" : ICON_DEL}</button>
                     </div>
                   </div>
                 </div>`;
@@ -215,7 +240,7 @@ export async function renderExercisesLibrary() {
                 </div>
                 <div style="display:flex;gap:4px">
                   <button class="btn btn-primary btn-sm apply-custom-tpl" data-id="${t.id}">Aplicar</button>
-                  <button class="btn btn-ghost btn-sm delete-custom-tpl" data-id="${t.id}" style="color:var(--danger);padding:4px 6px">${ICON_DEL}</button>
+                  <button class="btn btn-ghost btn-sm delete-custom-tpl" data-id="${t.id}" style="color:var(--danger);padding:4px 6px">${ex.is_default ? "" : ICON_DEL}</button>
                 </div>
               </div>
               ${t.description?`<p class="text-xs text-muted mb-sm">${t.description}</p>`:''}
